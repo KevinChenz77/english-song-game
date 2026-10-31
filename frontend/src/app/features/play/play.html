@@ -1,14 +1,17 @@
 <div class="bar">
   <button type="button" class="ghost" [routerLink]="['/kids', kidId()]">← 回去</button>
 </div>
-@if (song.value(); as s) {
-  <h1>{{ s.emoji }} {{ s.title }}</h1>
+@if (song.hasValue()) {
+  <h1>{{ song.value().emoji }} {{ song.value().title }}</h1>
+} @else if (song.error()) {
+  <p>這首歌的設定讀不到 😢 請確認網路後再試一次。</p>
+  <button type="button" (click)="song.reload()">重試</button>
 }
-@if (content.error(); as e) {
+@if (content.hasValue()) {
+  <p>歌詞 {{ content.value().lines.length }} 句（畫面第二波實作）</p>
+} @else if (content.error(); as e) {
   <p>{{ e.message }}</p>
   <button type="button" (click)="content.reload()">重試</button>
-} @else if (content.value(); as c) {
-  <p>歌詞 {{ c.lines.length }} 句（畫面第二波實作）</p>
 } @else {
   <p>歌詞載入中…</p>
 }

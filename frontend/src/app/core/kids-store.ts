@@ -6,7 +6,8 @@ import { nameOk } from './game/text';
 /** 小朋友與進度（localStorage 'kids'）。每次變更產生新陣列／新物件並寫回。 */
 @Service()
 export class KidsStore {
-  readonly kids = signal<Kid[]>(load<Kid[]>('kids', []));
+  private readonly _kids = signal<Kid[]>(load<Kid[]>('kids', []));
+  readonly kids = this._kids.asReadonly();
 
   constructor() {
     // 獎勵規則改版：舊的星星和貼紙全部歸零（名字和頭像保留），只做一次
@@ -37,7 +38,7 @@ export class KidsStore {
   }
 
   private set(ks: Kid[]) {
-    this.kids.set(ks);
+    this._kids.set(ks);
     save('kids', ks);
   }
 

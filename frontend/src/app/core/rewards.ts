@@ -14,7 +14,8 @@ export class Rewards {
   private readonly kids = inject(KidsStore);
 
   /** 慶祝畫面內容；null = 關閉。連續獲得時文字疊加。 */
-  readonly celebration = signal<Celebration | null>(null);
+  private readonly _celebration = signal<Celebration | null>(null);
+  readonly celebration = this._celebration.asReadonly();
 
   /** 每首歌每項只拿一次；有貼紙就加到這位小朋友的貼紙（每首歌各自一份）。 */
   earn(kidId: number, song: Song, key: RewardKey) {
@@ -27,13 +28,13 @@ export class Rewards {
       stickers: sticker ? [...k.stickers, sticker] : k.stickers,
     }));
     const text = rewardText(key, sticker);
-    this.celebration.update((c) => ({
+    this._celebration.update((c) => ({
       emoji: sticker || (REWARDS[key].star ? '⭐' : '💎'),
       text: c ? `${c.text}\n${text}` : text,
     }));
   }
 
   dismiss() {
-    this.celebration.set(null);
+    this._celebration.set(null);
   }
 }

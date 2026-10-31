@@ -1,16 +1,20 @@
 <div class="bar"><button type="button" class="ghost" routerLink="/">← 換人</button></div>
 @if (kid(); as k) {
   <h1>嗨 {{ k.avatar }} {{ k.name }}！選一首歌</h1>
-  @if (catalog.songs.error()) {
-    <p>歌曲清單讀不到，請重新整理。</p>
+  @if (catalog.songs.hasValue()) {
+    <ul>
+      @for (s of catalog.songs.value(); track s.id) {
+        <li>
+          <a [routerLink]="['play', s.id]">{{ s.emoji }} {{ s.title }}</a>
+          {{ starStr(k.songs[s.id] ?? {}) }}
+        </li>
+      }
+    </ul>
+  } @else if (catalog.songs.error()) {
+    <p>歌曲清單讀不到 😢 請確認網路後再試一次。</p>
+    <button type="button" (click)="catalog.songs.reload()">重試</button>
+  } @else {
+    <p>歌曲載入中…</p>
   }
-  <ul>
-    @for (s of catalog.songs.value() ?? []; track s.id) {
-      <li>
-        <a [routerLink]="['play', s.id]">{{ s.emoji }} {{ s.title }}</a>
-        {{ starStr(k.songs[s.id] ?? {}) }}
-      </li>
-    }
-  </ul>
   <p>我的貼紙：{{ k.stickers.join(' ') || '還沒有，加油！' }}</p>
 }
