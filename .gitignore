@@ -1,0 +1,19 @@
+# Python
+data/
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+
+# Data / secrets
+*.db
+.env
+
+# OS / editor
+.DS_Store
+.claude/settings.local.json

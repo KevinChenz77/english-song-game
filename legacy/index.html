@@ -1,0 +1,1089 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>唱歌學英文</title>
+<style>
+:root{--bg:#eaf6ff;--card:#fff;--ink:#16324f;--muted:#6b8299;--accent:#2e8bdc;--accent2:#9fd4ff;--good:#2fb36d;--bad:#e5534b;--hl:#ffcf33}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"PingFang TC","Noto Sans TC",sans-serif;background:var(--bg);color:var(--ink)}
+button,select,input{font:inherit}
+button{cursor:pointer;border:0;border-radius:14px;padding:10px 16px;background:var(--accent);color:#fff;font-size:18px;min-height:48px}
+button.ghost{background:#fff;color:var(--accent);border:2px solid var(--accent2)}
+button:disabled{opacity:.4;cursor:default}
+.screen{display:none;max-width:1100px;margin:0 auto;padding:16px}
+.screen.on{display:block}
+h1{font-size:28px;margin:8px 0 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.card{position:relative;background:var(--card);color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px;border-radius:20px;box-shadow:0 2px 8px #0001;min-height:150px;justify-content:center}
+.card .big{font-size:52px;line-height:1}
+/* 最難完成：2px 金色流動外框（轉動的錐形漸層） */
+@property --spin{syntax:'<angle>';inherits:false;initial-value:0deg}
+.card.gold{border:2px solid transparent;background:linear-gradient(var(--card),var(--card)) padding-box,conic-gradient(from var(--spin),#b8860b,#ffd700,#fff8dc,#ffd700,#b8860b,#daa520,#b8860b) border-box;animation:goldspin 3s linear infinite}
+@keyframes goldspin{to{--spin:360deg}}
+@media (prefers-reduced-motion:reduce){.card.gold{animation:none}}
+.card .del{position:absolute;top:0;right:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--muted)}
+.form{background:var(--card);border-radius:20px;padding:16px;margin-top:12px;display:none}
+.form.on{display:block}
+.form input{font-size:20px;padding:10px;border-radius:12px;border:2px solid var(--accent2);width:100%;max-width:320px}
+.avs{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.avs button{font-size:30px;background:#fff;border:3px solid transparent;padding:4px 10px}
+.avs button.sel{border-color:var(--accent)}
+.stickers{font-size:22px;margin-top:16px}
+h1.title{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:0}  /* 上邊距歸零，讓按鈕和右上角 💾 存檔同高 */
+h1.title button{font-size:16px}
+.help{background:var(--card);border-radius:16px;padding:12px 16px;margin-bottom:16px}
+.help h2{font-size:20px;margin:4px 0 8px}
+.help li{margin:8px 0;line-height:1.5}
+.help table{width:100%;border-collapse:collapse;font-size:16px}
+.help th,.help td{border-bottom:1px solid #eef4fa;padding:8px 6px;text-align:left}
+.help td:nth-child(2),.help th{white-space:nowrap}
+.help .grid{grid-template-columns:repeat(auto-fill,minmax(135px,1fr))}
+.help .card{cursor:default}
+.help .cap{font-size:14px;color:var(--muted);margin-top:6px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.tabs button{background:#fff;color:var(--accent);border:2px solid var(--accent2)}
+.tabs button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+#starsNow{margin-left:auto;font-size:26px}
+.stage{display:grid;grid-template-columns:1fr;gap:16px}
+@media (min-width:900px){.stage{grid-template-columns:1.1fr 1fr}}
+.vid{aspect-ratio:16/9;background:#000;border-radius:16px;overflow:hidden}
+.vid iframe{width:100%;height:100%;display:block}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:15px;color:var(--muted)}
+.ctrl select{padding:8px;border-radius:10px;max-width:100%}
+.ctrl button{font-size:15px;min-height:44px;padding:6px 12px}
+.ctrl select{min-height:44px}
+#pop button{min-height:44px!important}
+#playBtn{font-size:20px;min-height:52px;padding:8px 22px}
+#status{margin-top:8px;color:var(--bad)}
+#lyrics{background:var(--card);border-radius:16px;padding:12px 16px;height:min(60vh,520px);overflow-y:auto;position:relative}
+.line{font-size:20px;line-height:1.5;padding:6px 4px;border-radius:10px;color:var(--muted);transition:background .2s}
+.line.past{color:#9db0c2}
+.line.now{background:#fff6d6;color:var(--ink);font-size:23px;font-weight:600}
+.line{padding:10px 6px;border-bottom:1px solid #eef4fa}
+.zh{font-size:16px;color:#5f7489;margin-top:2px}
+body:has(#parent[open]) .zh{cursor:pointer;text-decoration:underline dashed var(--accent2)}
+#parent{margin-top:12px;background:var(--card);border-radius:14px;padding:8px 12px;color:var(--muted);font-size:15px}
+#parent summary{cursor:pointer;min-height:44px;display:flex;align-items:center}
+.vid{position:relative}
+.shield{position:absolute;inset:0;cursor:pointer}
+.line.now .zh{font-size:18px;color:var(--ink);font-weight:500}
+.vocab{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{font-size:15px;min-height:44px;padding:4px 12px;border-radius:999px;background:#eef6ff;color:var(--ink);font-weight:400}
+.chip b{color:var(--accent)}
+.line.now .chip{font-size:15px;background:#fff}
+.note{font-size:13px;color:var(--muted);text-align:center}
+.line .seek{font-size:15px;min-height:44px;min-width:44px;padding:0;margin-right:6px;vertical-align:middle;background:var(--accent2)}
+body.quiz .seek{display:none}
+.w{cursor:pointer;border-radius:6px;padding:0 1px}
+.w:hover{background:#e3f1ff}
+.w.sung{color:var(--accent)}
+.w.known{text-decoration:underline dotted var(--accent2)}
+.blank{display:inline-block;min-width:3.5em;border-bottom:3px solid var(--accent);text-align:center;color:transparent}
+.blank.ok{color:var(--good);border-color:var(--good)}
+#quizBox{display:none;background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;text-align:center}
+#quizBox .sent{font-size:22px;font-weight:600;margin:8px 0}
+#quizBox .sent .blank{color:transparent}
+#quizBox .zhq{font-size:18px;color:#5f7489}
+#quizBox .hint{font-size:20px;letter-spacing:1px}
+.typein{font-size:24px;padding:10px 14px;border-radius:14px;border:3px solid var(--accent2);width:min(260px,100%);text-align:center;margin:6px}
+.typein.wrong{border-color:var(--bad);animation:shake .4s}
+#quizBox .opts button{display:flex;flex-direction:column;align-items:center;gap:2px}
+#quizBox .opts small{font-size:17px;opacity:.75}
+body.quiz #quizBox,body.sing #quizBox{display:block}
+body.sing .seek{display:none}
+.modes{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:10px 0}
+.modes button.on{background:var(--accent);color:#fff}
+.mic{font-size:24px;min-height:64px;padding:10px 26px;border-radius:999px;margin:6px}
+.mic.rec{background:var(--bad);animation:pulse 1s infinite}
+.lvlbar{height:12px;background:#eef4fa;border-radius:6px;overflow:hidden;margin:10px auto;max-width:320px}
+#lvl{height:100%;width:0;background:var(--good);transition:width .1s}
+.sw-exact,.sw-near{color:var(--good)}
+.sw-miss{color:#e8890c;text-decoration:underline;cursor:pointer}
+.big-ok{font-size:28px}
+.line.ok .en::after{content:' ✅'}
+#quizBox .opts{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:12px 0}
+#quizBox .opts button{font-size:26px;min-width:120px;min-height:64px;background:#fff;color:var(--ink);border:3px solid var(--accent2)}
+#quizBox .opts button.right{background:var(--good);color:#fff;border-color:var(--good)}
+#quizBox .opts button.wrong{animation:shake .4s;border-color:var(--bad)}
+#quizBox .opts button.hint{animation:pulse 1s infinite}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes pulse{50%{transform:scale(1.08)}}
+#pop{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:14px 18px;border-radius:18px;display:flex;gap:12px;align-items:center;font-size:20px;box-shadow:0 6px 20px #0004;max-width:calc(100% - 32px)}
+#pop b{font-size:26px}
+#pop button{min-height:40px;padding:6px 12px}
+#cele{position:fixed;inset:0;background:#16324fcc;display:flex;align-items:center;justify-content:center;padding:16px}
+#cele div{background:#fff;border-radius:24px;padding:28px;text-align:center;font-size:22px;max-width:420px}
+#cele .big{font-size:64px}
+/* 雲端存檔：💾 按鈕放在頁面右上角，每個畫面第一列右邊留位置，避免蓋到 ❓、📥、星星 */
+#saveBtn{position:absolute;top:16px;right:16px;font-size:16px}
+.screen>:first-child{padding-right:110px}
+dialog{border:0;border-radius:20px;padding:20px;width:min(420px,calc(100% - 32px));background:var(--card);color:var(--ink)}
+dialog::backdrop{background:#16324fcc}
+dialog h2{margin:0 0 12px;font-size:22px}
+dialog label{display:block;margin:10px 0}
+dialog input{display:block;width:100%;margin-top:4px;font-size:20px;padding:10px;border-radius:12px;border:2px solid var(--accent2)}
+#cloudMsg{min-height:1.5em;font-size:18px}
+#cloudMsg.bad{color:var(--bad)}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.cmp div{background:var(--bg);border-radius:14px;padding:10px;font-size:16px;line-height:1.5;overflow-wrap:anywhere}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- 選小朋友 -->
+<div id="who" class="screen on">
+  <h1 class="title">🎵 唱歌學英文 <button class="ghost" id="toHelp">❓ 遊戲說明</button> <button class="ghost" id="toLoad">📥 匯入</button></h1>
+  <p>誰要玩呢？</p>
+  <div id="kids" class="grid"></div>
+  <div id="form" class="form">
+    <div>名字：<input id="kidName" maxlength="10" placeholder="例如：小明"></div>
+    <div id="avs" class="avs"></div>
+    <button id="kidOk">好了！</button> <button class="ghost" id="kidCancel">取消</button>
+  </div>
+</div>
+
+<!-- 遊戲說明 -->
+<div id="help" class="screen">
+  <div class="bar"><button class="ghost" id="helpBack">← 回去</button></div>
+  <h1>❓ 遊戲說明</h1>
+
+  <section class="help">
+    <h2>三種玩法</h2>
+    <ul>
+      <li><b>🎧 聽聽看</b>：跟著歌詞聽歌，點單字可以聽發音、看中文。</li>
+      <li><b>🧩 填填看</b>：唱到有空格的句子會停下來，選出或打出正確的單字。
+        <br>🙂 普通（10 題選擇）・🔥 挑戰（20 題選擇）・💎 最難（20 題自己打字）</li>
+      <li><b>🎤 唱唱看</b>：聽完一句會停下來，換你唸或唱，唸對的字變綠色、沒唸對的字變橘色。
+        <br>🎯 練習前 8 句・🏆 挑戰整首</li>
+    </ul>
+  </section>
+
+  <section class="help">
+    <h2>怎麼拿星星和貼紙</h2>
+    <p>每首歌最多 <b>4 顆星星</b>。每一項只能拿一次，拿到就不會不見。</p>
+    <table>
+      <tr><th>怎麼拿到</th><th>星星</th><th>貼紙／特效</th></tr>
+      <tr><td>🎧 聽聽看：聽完一整首</td><td>⭐</td><td>—</td></tr>
+      <tr><td>🧩 填填看「普通」：全部一次答對</td><td>⭐</td><td>—</td></tr>
+      <tr><td>🧩 填填看「挑戰」：全部一次答對</td><td>⭐</td><td id="helpSticker"></td></tr>
+      <tr><td>🧩 填填看「最難」：全部一次打對</td><td>—</td><td>金色小卡 ✨</td></tr>
+      <tr><td>🎤 唱唱看「練習前 8 句」：唸完</td><td>—</td><td>🎤 麥克風貼紙</td></tr>
+      <tr><td>🎤 唱唱看「挑戰整首」：80% 的句子過關</td><td>⭐</td><td>👑 皇冠貼紙</td></tr>
+    </table>
+  </section>
+
+  <section class="help">
+    <h2>曲子小卡長這樣</h2>
+    <div id="helpCards" class="grid"></div>
+    <p class="note">☆ 是還沒拿到的星星；👑 代表唱唱看「挑戰整首」唱對 80% 以上。</p>
+  </section>
+</div>
+
+<!-- 選歌 -->
+<div id="songs" class="screen">
+  <div class="bar"><button class="ghost" id="toWho">← 換人</button></div>
+  <h1 id="hi"></h1>
+  <div id="songList" class="grid"></div>
+  <div class="stickers">我的貼紙：<span id="stickers"></span></div>
+</div>
+
+<!-- 玩 -->
+<div id="play" class="screen">
+  <div class="bar">
+    <button class="ghost" id="toSongs">← 回去</button>
+    <div class="tabs"><button data-mode="listen">🎧 聽聽看</button> <button data-mode="quiz">🧩 填填看</button> <button data-mode="sing">🎤 唱唱看</button></div>
+    <div id="starsNow"></div>
+  </div>
+  <div class="stage">
+    <div>
+      <div class="vid"><div id="yt"></div><div class="shield" id="shield"></div></div>
+      <div class="ctrl"><button id="playBtn">▶ 播放</button></div>
+      <div id="status"></div>
+      <details id="parent">
+        <summary>⚙️ 家長設定</summary>
+        <div class="ctrl">影片版本：<select id="vidSel"></select></div>
+        <div class="ctrl">
+          歌詞時間：<button class="ghost" id="offM">⏪ 提早 0.1 秒</button><span id="offV"></span><button class="ghost" id="offP">延後 0.1 秒 ⏩</button>
+        </div>
+        <div class="ctrl">
+          <span style="visibility:hidden">歌詞時間：</span><button class="ghost" id="offM1">⏪ 提早 1 秒</button><button class="ghost" id="offP1">延後 1 秒 ⏩</button>
+        </div>
+        <div class="ctrl">設定打開時，點歌詞下方的中文可以修改翻譯。</div>
+      </details>
+    </div>
+    <div>
+      <div id="quizBox"></div>
+      <div id="lyrics">歌詞載入中…</div>
+    </div>
+  </div>
+</div>
+
+<div id="pop" hidden><b id="popW"></b><span id="popM"></span><button id="popS">🔊</button><button class="ghost" id="popX">✕</button></div>
+<div id="cele" hidden><div><div class="big" id="celeE"></div><p id="celeT"></p><button id="celeOk">好耶！</button></div></div>
+
+<!-- 雲端存檔／匯入 -->
+<button class="ghost" id="saveBtn">💾 存檔</button>
+<dialog id="cloud">
+  <form id="cloudForm">
+    <h2 id="cloudT"></h2>
+    <div id="cloudFields">
+      <label>名字<input id="cloudName" autocomplete="username"></label>
+      <label>密碼<input id="cloudPw" type="password" autocomplete="current-password"></label>
+    </div>
+    <p id="cloudMsg" role="status"></p>
+    <button id="cloudOk">確定</button> <button type="button" class="ghost" id="cloudX">取消</button>
+  </form>
+</dialog>
+<dialog id="ask">
+  <form method="dialog">
+    <h2 id="askT"></h2>
+    <div class="cmp"><div id="askCloud"></div><div id="askHere"></div></div>
+    <button value="cloud">用存檔的進度</button> <button class="ghost" value="keep" autofocus>保留這台的進度</button>
+  </form>
+</dialog>
+
+<script>
+// ---------- 歌曲設定（之後由「加歌工具」產生） ----------
+const SONG = {
+  id: 'letitgo', title: 'Let It Go', artist: 'Idina Menzel', from: '冰雪奇緣 Frozen', emoji: '❄️',
+  lrclibId: 12302283, search: 'let it go idina menzel',
+  videos: [
+    { id: 'L0MK7qz13bU', label: 'Sing-Along 版', offset: 4.5 },  // 對照影片字幕量的
+    { id: 'moSFlvxnbgk', label: '電影片段版', offset: 0 },       // 還沒校準
+  ],
+  sticker: '❄️',  // 填填看「挑戰」全對的這首歌專屬貼紙
+  quiz: ['go', 'snow', 'wind', 'cold', 'free', 'sky', 'door', 'light', 'sun', 'heart', 'queen', 'kingdom',
+         'mountain', 'storm', 'white', 'night', 'cry', 'girl', 'fear', 'ice', 'air', 'ground', 'past'],
+};
+const DICT = {
+  let: '讓（let it go = 放手、放下）', go: '走、去（let it go = 放手）', it: '它', snow: '雪', glows: '發光', glow: '發光',
+  white: '白色', mountain: '山', night: '夜晚', footprint: '腳印', kingdom: '王國', isolation: '孤單、孤立',
+  queen: '女王', wind: '風', howling: '呼嘯、吼叫', swirling: '旋轉', storm: '暴風雨', inside: '在裡面',
+  heart: '心', heaven: '天堂', tried: '試過', try: '試', see: '看見', good: '好的', girl: '女孩',
+  always: '總是', conceal: '藏起來', feel: '感覺', know: '知道', cold: '冷', never: '從來不',
+  bothered: '困擾', anyway: '反正', door: '門', slam: '用力關上', care: '在乎', free: '自由',
+  sky: '天空', cry: '哭', tears: '眼淚', stand: '站', stay: '留下', sun: '太陽', light: '光',
+  past: '過去', rise: '升起', dawn: '黎明', perfect: '完美', fear: '害怕', fears: '恐懼', frozen: '冰凍的',
+  power: '力量', air: '空氣', ground: '地面', soul: '靈魂', ice: '冰', thought: '想法', distance: '距離',
+  small: '小的', once: '曾經', control: '控制', funny: '好笑的', rules: '規則', wrong: '錯的', right: '對的',
+  limits: '限制', test: '測試', break: '突破', through: '穿過', back: '回來', here: '這裡', me: '我',
+  my: '我的', i: '我', you: '你', am: '是', is: '是', the: '這個／那個', a: '一個', and: '和', no: '不、沒有',
+  one: '一', be: '是、成為', can: '可以', what: '什麼', like: '像', come: '來', who: '誰', away: '離開',
+  all: '全部', an: '一個', anymore: '再也（不）', around: '周圍', at: '在', blast: '狂吹', "can't": '不能',
+  controlled: '控制住', "couldn't": '無法', crystallizes: '結晶', day: '白天、日子', do: '做', "don't": '不要',
+  everything: '每件事', flurries: '雪花紛飛', for: '為了', fractals: '碎形（雪花圖案）', get: '得到', going: '要去',
+  gone: '離開了', have: '必須、有', hold: '抓住', how: '多麼', "i'll": '我將會', "i'm": '我是', icy: '冰冷的',
+  in: '在…裡', into: '進入', "it's": '它是', keep: '保持', looks: '看起來', makes: '使得', not: '不',
+  now: '現在', of: '的', on: '在…上', rage: '狂暴', say: '說', seem: '似乎', seen: '被看見', some: '一些',
+  spiraling: '旋轉', that: '那個', them: '他們', they: '他們', "they're": '他們是', this: '這個',
+  time: '時間', to: '到', tonight: '今晚', turn: '轉身', well: '嗯', with: '和', "you'll": '你將會',
+};
+// 單字列不顯示太基本的字
+const STOP = new Set("a an the and it i you me my is am be to of in on at for with that this them they they're it's i'm i'll you'll do don't can can't not have some all how now well what who one no".split(' '));
+// 句子裡沒有關鍵字時，填填看改考這些有中文解釋的實詞
+const QUIZ_POOL = Object.keys(DICT).filter(w => !STOP.has(w) && !w.includes("'") && w.length >= 3);
+// 填填看兩個難度：普通考短的關鍵字、挑戰優先考長一點的字
+const QUIZ_LEVELS = {
+  normal: { label: '🙂 普通', n: 10, reward: '一顆星星', desc: '10 題，全對得 ⭐' },
+  hard: { label: '🔥 挑戰', n: 20, reward: '一顆星星和雪花貼紙', desc: '20 題，全對得 ⭐＋❄️ 貼紙' },
+  expert: { label: '💎 最難', n: 20, reward: '金色小卡', desc: '20 題自己打字，全對得金色小卡' },
+};
+const EASY_WORDS = () => SONG.quiz.filter(w => w.length <= 5);
+const HARD_WORDS = () => QUIZ_POOL.filter(w => w.length >= 5 && !EASY_WORDS().includes(w));
+
+// ---------- 存檔（只存在這台裝置） ----------
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d } catch { return d } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)) } catch {} },
+};
+let kids = store.get('kids', []);
+let kid = null;
+const saveKids = () => store.set('kids', kids);
+const prog = () => (kid.songs[SONG.id] ||= {});
+// 獎勵規則改版：舊的星星和貼紙全部歸零（名字和頭像保留），只做一次
+if (!store.get('rewardsV2', false)) {
+  kids.forEach(k => { k.songs = {}; k.stickers = [] });
+  saveKids(); store.set('rewardsV2', true);
+}
+
+// ---------- 小工具 ----------
+const $ = id => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e };
+const norm = w => w.toLowerCase().replace(/[’]/g, "'").replace(/[^a-z']/g, '').replace(/^'+|'+$/g, '');
+const lookup = w => DICT[w] || (w.endsWith('s') && DICT[w.slice(0, -1)]) || null;
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0;[a[i], a[j]] = [a[j], a[i]] } return a };
+const show = id => { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)) };
+
+function parseLRC(s) {
+  const out = [];
+  for (const ln of s.split('\n')) {
+    const m = ln.match(/^\[(\d+):(\d+(?:\.\d+)?)\](.*)$/);
+    if (m && m[3].trim()) out.push({ t: m[1] * 60 + parseFloat(m[2]), text: m[3].trim() });
+  }
+  out.sort((a, b) => a.t - b.t);
+  out.forEach((l, i) => l.end = out[i + 1] ? out[i + 1].t : l.t + 5);
+  return out;
+}
+
+// 從歌詞挑句子出題：優先考關鍵字，沒有就考 pool 裡的其他單字；每個字最多 2 次、題目之間至少隔 gap 句
+function pickQuestions(lines, words, max = 8, pool = [], minGap = 2) {
+  const set = new Set(words), extra = new Set(pool), all = [...new Set([...words, ...pool])], used = {}, out = [];
+  const gap = Math.max(minGap, Math.floor(lines.length / (max + 1)));
+  lines.forEach((l, i) => {
+    if (out.length >= max) return;
+    if (out.length && i - out[out.length - 1].i < gap) return;
+    const toks = l.text.split(/\s+/), ns = toks.map(norm);
+    const cand = [...ns.keys()].filter(k => set.has(ns[k])).concat([...ns.keys()].filter(k => extra.has(ns[k])));
+    const k = cand.find(k => (used[ns[k]] || 0) < 2);
+    if (k == null) return;
+    const w = ns[k];
+    used[w] = (used[w] || 0) + 1;
+    const opts = shuffle([w, ...shuffle(all.filter(x => x !== w)).slice(0, 2)]);
+    out.push({ i, k, w, opts, endT: l.end, done: false, tries: 0 });
+  });
+  return out;
+}
+
+async function fetchJSON(url) {
+  for (let i = 0; i < 4; i++) {
+    try { const r = await fetch(url); if (r.ok) return await r.json() } catch {}
+    await new Promise(r => setTimeout(r, 800 * (i + 1)));  // LRCLIB 偶爾回 503，等一下再試
+  }
+  throw new Error('fetch failed: ' + url);
+}
+async function loadLyrics() {
+  const key = 'lrc_' + SONG.id;
+  let lrc = store.get(key, null);
+  if (!lrc) {
+    try { lrc = (await fetchJSON('https://lrclib.net/api/get/' + SONG.lrclibId)).syncedLyrics } catch {}
+    if (!lrc) lrc = ((await fetchJSON('https://lrclib.net/api/search?q=' + encodeURIComponent(SONG.search))).find(x => x.syncedLyrics) || {}).syncedLyrics;
+    if (!lrc) throw new Error('no lyrics');
+    store.set(key, lrc);
+  }
+  return parseLRC(lrc);
+}
+
+// 整句中文：執行時用 MyMemory 機器翻譯（程式裡不放歌詞譯文），存在本機，家長可點一下修改
+const trKey = () => 'tr_' + SONG.id;
+let TR = store.get(trKey(), {});
+async function translateAll() {
+  const todo = lines.map((l, i) => i).filter(i => !TR[lines[i].text]);
+  const worker = async () => {
+    while (todo.length) {
+      const i = todo.shift(), text = lines[i].text;
+      try {
+        const r = await fetchJSON('https://api.mymemory.translated.net/get?langpair=en|zh-TW&q=' + encodeURIComponent(text));
+        if (r.responseStatus == 200 && r.responseData?.translatedText) { TR[text] = r.responseData.translatedText; store.set(trKey(), TR) }
+      } catch {}
+      setZh(i);
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+}
+function setZh(i) {
+  const z = $('Z' + i); if (!z) return;
+  z.textContent = TR[lines[i].text] || '（翻譯載入中… 也可以點這裡自己填）';
+}
+function editZh(i) {
+  if (!$('parent').open) return;  // 只有家長設定打開時才能改，避免小朋友誤觸
+  const text = lines[i].text, v = prompt('修改這句的中文翻譯：\n' + text, TR[text] || '');
+  if (v == null) return;
+  TR[text] = v.trim(); store.set(trKey(), TR); setZh(i);
+}
+
+let voice = null;
+// macOS / iOS 的第一個英文聲音常是 Albert、Bubbles 這類趣味機器人聲，要挑自然的
+const GOOD_VOICES = /premium|enhanced|natural|neural|google us english|samantha|ava|allison|aria|jenny|zoe/i;
+const FUNNY_VOICES = /albert|bad news|bahh|bells|boing|bubbles|cellos|fred|good news|jester|junior|organ|ralph|superstar|trinoids|whisper|wobble|zarvox|grandma|grandpa|rocko|kathy/i;
+const pickVoice = () => {
+  const vs = speechSynthesis.getVoices().filter(v => v.lang.replace('_', '-').startsWith('en') && !FUNNY_VOICES.test(v.name));
+  const us = vs.filter(v => /en-US/i.test(v.lang.replace('_', '-')));
+  voice = us.find(v => GOOD_VOICES.test(v.name)) || vs.find(v => GOOD_VOICES.test(v.name)) || us[0] || vs[0] || null;
+};
+try { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice } catch {}
+// 單字真人發音：Free Dictionary API（Wikimedia Commons 錄音），查不到才用合成語音
+const AUD = store.get('aud2', {});  // 單字 → mp3 網址；'' 代表查過沒有
+const wordAudio = new Audio();
+// iOS 要在點擊當下先播過一次，之後非同步拿到網址才播得出來
+const SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+document.addEventListener('pointerdown', () => { wordAudio.src = SILENT; wordAudio.play().catch(() => {}) }, { once: true });
+async function audioUrl(w) {
+  if (w in AUD) return AUD[w];
+  const forms = [w];
+  if (/..s$/.test(w)) forms.push(w.slice(0, -1));
+  if (/...ing$/.test(w)) forms.push(w.slice(0, -3));
+  let failed = false;
+  for (const f of forms) {
+    let r;
+    // 查不到的字回 404 時沒有 CORS 標頭，fetch 會直接丟錯，所以出錯也繼續試下一個形式
+    try { r = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(f)) } catch { failed = true; continue }
+    if (r.status === 404) continue;
+    if (!r.ok) return null;  // 被限流或伺服器錯誤：不記錄，下次再查
+    // 字典 API 自己的音檔主機常壞（502），改用它標的 Wikimedia Commons 原始錄音
+    const ps = (await r.json()).flatMap(e => e.phonetics || []).filter(p => /curid=\d+/.test(p.sourceUrl || ''));
+    const p = ps.find(p => /-us\.mp3$/.test(p.audio || '')) || ps[0];
+    if (!p) continue;
+    try {
+      const id = p.sourceUrl.match(/curid=(\d+)/)[1];
+      const c = await (await fetch(`https://commons.wikimedia.org/w/api.php?action=query&pageids=${id}&prop=videoinfo&viprop=url|derivatives&format=json&origin=*`)).json();
+      const vi = Object.values(c.query.pages)[0].videoinfo[0];
+      const url = (vi.derivatives || []).map(d => d.src).find(s => /\.mp3$/.test(s)) || vi.url;
+      AUD[w] = url; store.set('aud2', AUD);
+      return url;
+    } catch { return null }
+  }
+  if (failed) return null;  // 可能只是網路問題：不記錄，下次再查
+  AUD[w] = ''; store.set('aud2', AUD);
+  return '';
+}
+async function sayWord(w) {
+  const url = await audioUrl(w);
+  if (!url) return speak(w);
+  wordAudio.src = url;
+  wordAudio.play().catch(() => speak(w));
+}
+function speak(text) {
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US'; u.rate = 0.8; if (voice) u.voice = voice;
+    speechSynthesis.speak(u);
+  } catch {}
+}
+
+// ---------- 唱唱看：錄音 + 裝置上的 Whisper 辨識 + 逐字比對 ----------
+const VOICE_RMS = 0.015;  // ponytail: 固定的說話音量門檻，教室太吵或麥克風太小聲時調這個值
+let actx = null, stopRec = null;
+async function record(onLevel) {
+  if (!navigator.mediaDevices) throw new Error('需要 HTTPS 網址（或在電腦上用 localhost）才能使用麥克風');
+  actx ||= new (window.AudioContext || window.webkitAudioContext)();  // 要在點擊當下建立，iOS 才不會擋
+  actx.resume();
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+  const src = actx.createMediaStreamSource(stream), proc = actx.createScriptProcessor(4096, 1, 1);
+  const chunks = [], sec = 4096 / actx.sampleRate;
+  let voiced = 0, silent = 0, total = 0, ended = false;
+  return new Promise(resolve => {
+    const done = () => {
+      if (ended) return; ended = true; stopRec = null;
+      proc.disconnect(); src.disconnect(); stream.getTracks().forEach(t => t.stop());
+      if (voiced * sec < 0.4) return resolve(null);  // 有聲音的部分太短：當成沒唸，避免 Whisper 亂產生文字
+      const buf = new Float32Array(chunks.reduce((n, c) => n + c.length, 0));
+      let o = 0; for (const c of chunks) { buf.set(c, o); o += c.length }
+      resolve(to16k(buf, actx.sampleRate));
+    };
+    stopRec = done;
+    proc.onaudioprocess = e => {
+      const d = new Float32Array(e.inputBuffer.getChannelData(0));
+      chunks.push(d); total += sec;
+      const rms = Math.sqrt(d.reduce((s, x) => s + x * x, 0) / d.length);
+      onLevel(rms);
+      if (rms > VOICE_RMS) { voiced++; silent = 0 } else if (voiced) silent += sec;
+      if ((voiced && silent > 1.2) || total > 8 || (!voiced && total > 4)) done();  // 唸完停 1.2 秒、最長 8 秒、4 秒沒聲音
+    };
+    src.connect(proc); proc.connect(actx.destination);
+  });
+}
+async function to16k(buf, sr) {
+  if (sr === 16000) return buf;
+  const off = new OfflineAudioContext(1, Math.ceil(buf.length * 16000 / sr), 16000);
+  const b = off.createBuffer(1, buf.length, sr); b.copyToChannel(buf, 0);
+  const s = off.createBufferSource(); s.buffer = b; s.connect(off.destination); s.start();
+  return (await off.startRendering()).getChannelData(0);
+}
+
+let asrP = null, asrNote = '';
+const setAsrNote = s => { asrNote = s; const n = $('asrNote'); if (n) n.textContent = s };
+function loadASR() {
+  return asrP ||= (async () => {
+    const { pipeline } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.1/+esm');
+    const files = {};
+    const asr = await pipeline('automatic-speech-recognition', 'onnx-community/whisper-tiny.en', {
+      dtype: 'q8', device: 'wasm',
+      progress_callback: p => {
+        if (p.status !== 'progress' || !p.total) return;
+        files[p.file] = [p.loaded, p.total];
+        const [l, t] = Object.values(files).reduce((a, [x, y]) => [a[0] + x, a[1] + y], [0, 0]);
+        setAsrNote(`語音模型下載中 ${Math.round(l / t * 100)}%（只有第一次需要，約 41MB）`);
+      },
+    });
+    setAsrNote('語音模型準備中…');
+    await asr(new Float32Array(16000));  // 先暖機一次：第一次辨識要編譯 WASM，會慢好幾秒
+    setAsrNote('');
+    return asr;
+  })().catch(e => { asrP = null; setAsrNote('語音模型載入失敗，請確認網路後重新點「唱唱看」'); throw e });
+}
+async function transcribe(audio) {
+  // 前後補 0.5 秒靜音：錄音一開始就是說話聲時，Whisper 會漏掉第一個字
+  const padded = new Float32Array(audio.length + 16000);
+  padded.set(audio, 8000);
+  const t = (await (await loadASR())(padded)).text.trim();
+  return /^(\[.*\]|\(.*\)|thank you\.?|you\.?|\.+)$/i.test(t) ? '' : t;  // Whisper 沒聽到東西時常冒出這些
+}
+
+// 縮寫展開後用 Levenshtein 逐字對齊；只差一個字母（4 個字母以上的字）算「接近」給半分
+const EXPAND = { "don't": 'do not', "can't": 'can not', cannot: 'can not', "couldn't": 'could not', "won't": 'will not', "i'm": 'i am', "it's": 'it is', "they're": 'they are', "i'll": 'i will', "you'll": 'you will', "let's": 'let us', gonna: 'going to', wanna: 'want to' };
+const expand = w => (EXPAND[w] || w).split(' ');
+function charDist(a, b) {
+  let prev = [...Array(b.length + 1).keys()];
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j - 1] + (a[i - 1] !== b[j - 1]), prev[j] + 1, cur[j - 1] + 1);
+    prev = cur;
+  }
+  return prev[b.length];
+}
+function scoreLine(expected, heard) {
+  const toks = expected.split(/\s+/).filter(t => norm(t)), E = [], owner = [];
+  toks.forEach((t, k) => expand(norm(t)).forEach(w => { E.push(w); owner.push(k) }));
+  const H = heard.split(/[\s-]+/).map(norm).filter(Boolean).flatMap(expand);  // Whisper 有時會輸出 snow-glows
+  const sub = (a, b) => a === b ? 0 : a.length >= 4 && charDist(a, b) <= 1 ? 0.5 : 1;
+  const D = Array.from({ length: E.length + 1 }, (_, i) => Array.from({ length: H.length + 1 }, (_, j) => i + j));
+  for (let i = 1; i <= E.length; i++)
+    for (let j = 1; j <= H.length; j++)
+      D[i][j] = Math.min(D[i - 1][j - 1] + sub(E[i - 1], H[j - 1]), D[i - 1][j] + 1, D[i][j - 1] + 1);
+  const marks = E.map(() => 'miss');
+  for (let i = E.length, j = H.length; i > 0 && j > 0;) {
+    const c = sub(E[i - 1], H[j - 1]);
+    if (D[i][j] === D[i - 1][j - 1] + c) { marks[i - 1] = c === 0 ? 'exact' : c === 0.5 ? 'near' : 'miss'; i--; j-- }
+    else if (D[i][j] === D[i - 1][j] + 1) i--;
+    else j--;
+  }
+  const rank = { exact: 0, near: 1, miss: 2 }, words = toks.map(t => ({ t, ok: 'exact' }));
+  marks.forEach((m, n) => { const w = words[owner[n]]; if (rank[m] > rank[w.ok]) w.ok = m });
+  const score = E.length ? marks.reduce((s, m) => s + (m === 'exact' ? 1 : m === 'near' ? 0.5 : 0), 0) / E.length : 0;
+  return { words, score };
+}
+
+// ---------- 畫面 1：選小朋友 ----------
+const AVATARS = ['🐱', '🐶', '🐰', '🦊', '🐼', '🐨', '🦄', '🐸', '🐧', '🦁', '⛄', '👸'];
+let pickedAv = AVATARS[0];
+function renderKids() {
+  const box = $('kids'); box.replaceChildren();
+  kids.forEach(k => {
+    const c = el('button', 'card');
+    c.append(el('div', 'big', k.avatar), el('div', '', k.name), el('div', '', '⭐ ' + totalStars(k)));
+    const d = el('span', 'del', '✕');
+    d.onclick = e => { e.stopPropagation(); if (confirm(`要刪除 ${k.name} 的存檔嗎？`)) { kids = kids.filter(x => x !== k); saveKids(); renderKids() } };
+    c.append(d);
+    c.onclick = () => { kid = k; openSongs() };
+    box.append(c);
+  });
+  const add = el('button', 'card');
+  add.append(el('div', 'big', '➕'), el('div', '', '新增小朋友'));
+  add.onclick = () => { $('form').classList.add('on'); $('kidName').focus() };
+  box.append(add);
+}
+$('avs').append(...AVATARS.map(a => {
+  const b = el('button', a === pickedAv ? 'sel' : '', a);
+  b.onclick = () => { pickedAv = a; $('avs').querySelectorAll('button').forEach(x => x.classList.toggle('sel', x === b)) };
+  return b;
+}));
+$('kidOk').onclick = () => {
+  const name = $('kidName').value.trim();
+  if (!name) return $('kidName').focus();
+  kids.push({ id: Date.now(), name, avatar: pickedAv, songs: {}, stickers: [] });
+  saveKids(); $('kidName').value = ''; $('form').classList.remove('on'); renderKids();
+};
+$('kidCancel').onclick = () => $('form').classList.remove('on');
+
+// ---------- 畫面 2：選歌 ----------
+const starStr = p => '⭐'.repeat(starCount(p)) + '☆'.repeat(STAR_KEYS.length - starCount(p)) + (p.singAll ? ' 👑' : '');  // 唱唱看達標才掛皇冠，不顯示分數
+function openSongs() {
+  $('hi').textContent = `嗨 ${kid.avatar} ${kid.name}！選一首歌`;
+  const c = el('button', 'card' + (prog().expert ? ' gold' : ''));
+  c.append(el('div', 'big', SONG.emoji), el('b', '', SONG.title), el('div', '', SONG.from), el('div', '', starStr(prog())));
+  c.onclick = openPlay;
+  $('songList').replaceChildren(c);
+  $('stickers').textContent = kid.stickers.join(' ') || '還沒有，加油！';
+  show('songs');
+}
+$('toWho').onclick = () => { renderKids(); show('who') };
+
+// ---------- 遊戲說明：範例小卡用跟選歌畫面一樣的樣式 ----------
+$('toHelp').onclick = () => {
+  $('helpSticker').textContent = `${SONG.sticker} 這首歌的專屬貼紙`;
+  const sample = (p, gold, cap) => {
+    const c = el('div', 'card' + (gold ? ' gold' : ''));
+    c.append(el('div', 'big', SONG.emoji), el('b', '', SONG.title), el('div', '', SONG.from), el('div', '', starStr(p)));
+    const w = el('div'); w.append(c, el('div', 'cap', cap));
+    return w;
+  };
+  $('helpCards').replaceChildren(
+    sample({}, false, '剛開始'),
+    sample({ listen: true, quizNormal: true }, false, '拿到 2 顆星'),
+    sample({ listen: true, quizNormal: true, singAll: true }, false, '唱唱看「挑戰整首」唱對 80% 以上：多一顆星，還掛上 👑'),
+    sample({ listen: true, quizNormal: true, quizHard: true, singAll: true }, false, '4 顆星全拿到'),
+    sample({ listen: true, quizNormal: true, quizHard: true, singAll: true }, true, '「最難」全對：金色流動外框'),
+  );
+  show('help'); window.scrollTo(0, 0);
+};
+$('helpBack').onclick = () => show('who');
+
+// ---------- 畫面 3：玩 ----------
+let player = null, ready = false, lines = [], mode = 'listen', qs = [], active = null, curLine = -1, vidIdx = 0, offset = 0, timer = null;
+let heard = new Set(), makeup = false, singAll = false, singSummary = null, quizLevel = 'normal';
+
+function openPlay() {
+  show('play');
+  $('starsNow').textContent = starStr(prog());
+  $('vidSel').replaceChildren(...SONG.videos.map((v, i) => { const o = el('option', '', v.label); o.value = i; return o }));
+  $('vidSel').value = vidIdx;
+  setOffset(store.get('off_' + SONG.videos[vidIdx].id, SONG.videos[vidIdx].offset));
+  if (!lines.length) loadLyrics().then(l => { lines = l; setMode(mode); translateAll() }).catch(() => {
+    $('lyrics').replaceChildren(el('p', '', '歌詞抓不到 😢 請確認網路後再試一次。'));
+    const b = el('button', '', '重試'); b.onclick = openPlay; $('lyrics').append(b);
+  });
+  else setMode(mode);
+  if (!player && window.YT && YT.Player) makePlayer();
+}
+window.onYouTubeIframeAPIReady = () => { if ($('play').classList.contains('on')) makePlayer() };
+function makePlayer() {
+  player = new YT.Player('yt', {
+    videoId: SONG.videos[vidIdx].id, width: '100%', height: '100%',
+    playerVars: { playsinline: 1, rel: 0, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3 },
+    events: {
+      onReady: () => { ready = true; timer ||= setInterval(tick, 100) },
+      onStateChange: e => {
+        $('playBtn').textContent = e.data === YT.PlayerState.PLAYING ? '⏸ 暫停' : '▶ 播放';
+        if (e.data === YT.PlayerState.ENDED) finishQuiz();
+      },
+      onError: () => { $('status').textContent = '這支影片沒辦法在這裡播放，請在上面換另一個影片版本。' },
+    },
+  });
+}
+$('toSongs').onclick = () => { if (ready) player.pauseVideo(); openSongs() };
+// 影片上蓋透明遮罩，小朋友點不到 YouTube 的連結和推薦影片
+$('playBtn').onclick = $('shield').onclick = () => { if (!ready) return; player.getPlayerState() === YT.PlayerState.PLAYING ? player.pauseVideo() : player.playVideo() };
+$('vidSel').onchange = () => {
+  vidIdx = +$('vidSel').value; $('status').textContent = '';
+  setOffset(store.get('off_' + SONG.videos[vidIdx].id, SONG.videos[vidIdx].offset));
+  if (ready) player.cueVideoById(SONG.videos[vidIdx].id);
+  setMode(mode);
+};
+// offset > 0：歌詞延後顯示（影片前奏比較長時用）
+function setOffset(v) { offset = Math.round(v * 10) / 10; $('offV').textContent = ` ${offset > 0 ? '+' : ''}${offset.toFixed(1)} 秒 `; store.set('off_' + SONG.videos[vidIdx].id, offset) }
+$('offM').onclick = () => setOffset(offset - 0.1);
+$('offP').onclick = () => setOffset(offset + 0.1);
+$('offM1').onclick = () => setOffset(offset - 1);
+$('offP1').onclick = () => setOffset(offset + 1);
+
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+function setMode(m) {
+  mode = m;
+  document.body.classList.toggle('quiz', m === 'quiz');
+  document.body.classList.toggle('sing', m === 'sing');
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+  qs = m === 'quiz' ? (quizLevel === 'expert' ? pickQuestions(lines, QUIZ_POOL.filter(w => w.length >= 6), 20, HARD_WORDS().concat(QUIZ_POOL), 1)
+      : quizLevel === 'hard' ? pickQuestions(lines, HARD_WORDS(), 20, QUIZ_POOL, 1) : pickQuestions(lines, EASY_WORDS(), 10, [], 1))
+    : m === 'sing' ? (singAll ? lines : lines.slice(0, 8)).map((l, i) => ({ i, endT: l.end, done: false, tries: 0 }))  // 練習：前 8 句連續、每句都停
+    : [];
+  if (m === 'quiz') qs.slice(0, 8).forEach((q, n) => setTimeout(() => audioUrl(q.w), n * 500));  // 先慢慢查好答案的發音，避免被限流
+  if (m === 'sing') loadASR().catch(() => {});
+  if (stopRec) stopRec();
+  active = null; curLine = -1; heard = new Set(); makeup = false; singSummary = null;
+  renderLyrics(); renderQBox();
+  if (ready) { player.seekTo(0, true); player.pauseVideo() }
+}
+
+function renderLyrics() {
+  const box = $('lyrics'); box.replaceChildren();
+  lines.forEach((l, i) => {
+    const row = el('div', 'line'); row.id = 'L' + i;
+    const en = el('div', 'en'), zh = el('div', 'zh'), vocab = el('div', 'vocab');
+    const s = el('button', 'seek', '▶'); s.onclick = () => { if (ready) { player.seekTo(l.t + offset, true); player.playVideo() } };
+    en.append(s);
+    const q = qs.find(q => q.i === i), seen = new Set();
+    l.text.split(/\s+/).forEach((tok, k) => {
+      if (q && q.k === k) { const b = el('span', 'blank', tok); b.id = 'B' + i; en.append(b, ' '); return }
+      const w = el('span', 'w' + (lookup(norm(tok)) ? ' known' : ''), tok);
+      w.onclick = () => tapWord(tok);
+      en.append(w, ' ');
+      const n = norm(tok), m = lookup(n);
+      if (m && !STOP.has(n) && !seen.has(n) && !(q && n === q.w)) {  // 填空題的答案不放進單字列
+        seen.add(n);
+        const c = el('button', 'chip'); c.append(el('b', '', n), ' ' + m.split('（')[0]);
+        c.onclick = () => tapWord(n);
+        vocab.append(c);
+      }
+    });
+    zh.id = 'Z' + i; zh.onclick = () => editZh(i);
+    row.append(en, zh);
+    if (vocab.childNodes.length) row.append(vocab);
+    box.append(row);
+    setZh(i);
+  });
+  box.append(el('p', 'note', '中文是機器翻譯，家長可以在「⚙️ 家長設定」裡打開修改。'),
+    el('p', 'note', '單字真人發音來自 Free Dictionary API／Wikimedia Commons（CC BY／BY-SA 授權）；沒有錄音的字用合成語音。'));
+}
+
+function tapWord(tok) {
+  const w = norm(tok); if (!w) return;
+  if (ready && player.getPlayerState() === YT.PlayerState.PLAYING && mode === 'listen') player.pauseVideo();
+  sayWord(w);
+  $('popW').textContent = w; $('popM').textContent = lookup(w) || '（還沒有中文解釋）';
+  $('popS').onclick = () => sayWord(w);
+  $('pop').hidden = false;
+  clearTimeout(popTimer); popTimer = setTimeout(() => $('pop').hidden = true, 3000);
+}
+let popTimer;
+$('popX').onclick = () => $('pop').hidden = true;
+
+function tick() {
+  if (!ready || !lines.length || !$('play').classList.contains('on')) return;
+  const t = player.getCurrentTime() - offset;  // 換算成歌詞時間
+  let i = -1;
+  while (i + 1 < lines.length && lines[i + 1].t <= t) i++;
+  if (i !== curLine) {
+    // 只算照順序播到的句子（容許計時器變慢時一次跳 3 句），拖進度條不算
+    if (i > curLine && i - curLine <= 3) for (let k = curLine + 1; k <= i; k++) heard.add(k);
+
+    document.querySelectorAll('.line.now .w.sung').forEach(x => x.classList.remove('sung'));
+    lines.forEach((_, k) => { const r = $('L' + k); r.classList.toggle('now', k === i); r.classList.toggle('past', k < i) });
+    curLine = i;
+    if (i >= 0) { const r = $('L' + i), box = $('lyrics'); box.scrollTo({ top: r.offsetTop - box.clientHeight / 2 + r.clientHeight / 2, behavior: 'smooth' }) }
+  }
+  // 卡拉 OK：依時間比例逐字亮起
+  if (i >= 0) {
+    const l = lines[i], ws = $('L' + i).querySelectorAll('.en .w, .en .blank');
+    const dur = Math.min(l.end - l.t, ws.length * 0.5 + 0.8);
+    const n = Math.ceil(Math.min(1, (t - l.t) / dur) * ws.length);
+    ws.forEach((w, k) => w.classList.toggle('sung', k < n));
+  }
+  if (mode === 'listen' && !prog().listen && heard.size >= lines.length * 0.8) earn('listen');
+  if (mode !== 'listen') {  // 填填看和唱唱看共用：唱到句尾就停下來
+    const q = qs.find(q => !q.done && t >= q.endT - 0.15 && t < q.endT + 1.5);
+    if (q) {
+      if (player.getPlayerState() === YT.PlayerState.PLAYING) player.pauseVideo();
+      if (active !== q) { active = q; renderQBox() }
+    }
+    if (t > lines[lines.length - 1].end) finishQuiz();
+  }
+}
+
+function renderQBox(msg) {
+  const box = $('quizBox'); box.replaceChildren();
+  if (mode === 'sing') return renderSing(msg);
+  if (mode !== 'quiz') return;
+  const doneN = qs.filter(q => q.done).length;
+  box.append(el('div', '', `${QUIZ_LEVELS[quizLevel].label}　第 ${Math.min(doneN + 1, qs.length)} / ${qs.length} 題`));
+  if (!active) {
+    if (!doneN || qs.finished) {  // 還沒開始或已結束才能換難度，避免玩到一半誤觸重來
+      const modes = el('div', 'modes');
+      Object.entries(QUIZ_LEVELS).forEach(([k, v]) => {
+        const b = el('button', 'ghost' + (quizLevel === k ? ' on' : ''), `${v.label}（${v.desc}）`);
+        b.onclick = () => { quizLevel = k; setMode('quiz') };
+        modes.append(b);
+      });
+      box.append(modes);
+    }
+    box.append(el('p', '', msg || (makeup ? '回去補答漏掉的題目 🔙' : doneN ? '很好！繼續聽 🎧' : '按 ▶ 播放，聽到空格那句時會停下來喔！')));
+    return;
+  }
+  const q = active;
+  box.append(el('p', '', '空格裡是哪個字？'));
+  const sent = el('div', 'sent');
+  lines[q.i].text.split(/\s+/).forEach((tok, k) => sent.append(k === q.k ? el('span', 'blank', tok) : tok, ' '));
+  box.append(sent, el('div', 'zhq', TR[lines[q.i].text] || ''));
+  const again = el('button', 'ghost', '🔁 再聽一次');
+  again.onclick = () => { player.seekTo(lines[q.i].t + offset - 0.3, true); player.playVideo() };
+  if (quizLevel === 'expert') return renderTyping(q, box, again);
+  const opts = el('div', 'opts');
+  q.opts.forEach(w => {
+    const b = el('button');
+    b.append(el('b', '', w), el('small', '', (lookup(w) || '').split('（')[0]));
+    b.onclick = () => answer(q, w, b, opts);
+    opts.append(b);
+  });
+  box.append(opts, again);
+}
+
+// 最難：自己打字。提示第一個字母、字母數和中文意思，錯 2 次就直接給答案讓他照著打
+function renderTyping(q, box, again) {
+  const hint = q.tries >= 2 ? `答案是「${q.w}」，照著打一次` : `${q.w[0]} ${'＿ '.repeat(q.w.length - 1)}（${q.w.length} 個字母）${(lookup(q.w) || '').split('（')[0]}`;
+  const inp = el('input', 'typein');
+  Object.assign(inp, { autocapitalize: 'off', autocomplete: 'off', spellcheck: false, enterKeyHint: 'done', placeholder: '打出空格裡的字' });
+  inp.setAttribute('autocorrect', 'off');
+  const ok = el('button', 'mic', '確定');
+  const submit = () => {
+    if (!norm(inp.value)) return inp.focus();
+    if (norm(inp.value) === q.w) return answer(q, q.w);
+    q.tries++; renderQBox();
+    const n = $('quizBox').querySelector('.typein'); n.classList.add('wrong'); n.focus();
+  };
+  ok.onclick = submit;
+  inp.onkeydown = e => { if (e.key === 'Enter') submit() };
+  box.append(el('p', 'hint', hint), inp, ok, again);
+  inp.focus();
+}
+
+function answer(q, w, btn, opts) {
+  if (q.done) return;
+  if (w === q.w) {
+    q.done = true; sayWord(q.w);
+    $('B' + q.i).classList.add('ok');
+    active = null;
+    renderQBox(`✅ 答對了！${q.w} ${(lookup(q.w) || '').split('（')[0]}`);
+    // 在點擊當下就播放，iOS 才不會擋
+    const left = qs.find(x => !x.done);
+    if (!makeup) player.playVideo();
+    else if (left) jumpTo(left);
+    else finishQuiz();
+  } else {
+    q.tries++; btn.classList.add('wrong'); btn.disabled = true;
+    [...opts.children].find(x => x.firstChild.textContent === q.w).classList.add('hint');
+  }
+}
+const jumpTo = q => { player.seekTo(lines[q.i].t + offset - 0.3, true); player.playVideo() };
+
+function finishQuiz() {
+  if (mode === 'listen' || !qs.length || qs.finished) return;
+  const left = qs.find(q => !q.done);
+  if (left) {  // 拖進度條跳過的題目，最後回去補問
+    if (!makeup) { makeup = true; renderQBox(); jumpTo(left) }
+    return;
+  }
+  qs.finished = true;
+  if (mode === 'sing') return finishSing();
+  // 每個難度都要全部一次答對才拿獎勵；成績一定顯示
+  const first = qs.filter(q => !q.tries).length, { label, reward } = QUIZ_LEVELS[quizLevel];
+  const perfect = first === qs.length;
+  renderQBox(`${label}：一次就答對 ${first} / ${qs.length} 題` + (perfect ? '，全對！' : `，全部答對可以拿到${reward}喔！`));
+  if (perfect) earn({ normal: 'quizNormal', hard: 'quizHard', expert: 'expert' }[quizLevel]);
+}
+
+// ---------- 唱唱看的畫面與流程 ----------
+function renderSing(msg) {
+  const box = $('quizBox');
+  const note = el('div', 'note', asrNote); note.id = 'asrNote'; box.append(note);
+  if (singSummary) {
+    const s = singSummary;
+    box.append(el('h3', '', '🎉 唱完了！'));  // 不顯示分數，達標時由慶祝畫面告訴小朋友
+    if (singAll && s.score < 80) box.append(el('p', '', '唱對 80% 以上的句子，就可以拿到一顆星星和皇冠貼紙喔！'));
+    if (s.missed.length) {
+      const m = el('div', 'vocab'); m.style.justifyContent = 'center';
+      s.missed.forEach(w => { const c = el('button', 'chip', w); c.onclick = () => sayWord(w); m.append(c) });
+      box.append(el('p', '', '要多練的字：'), m);
+    }
+    const again = el('button', '', '再玩一次'); again.onclick = () => setMode('sing');
+    box.append(again);
+    return;
+  }
+  const doneN = qs.filter(q => q.done).length;
+  box.append(el('div', '', `第 ${Math.min(doneN + 1, qs.length)} / ${qs.length} 句`));
+  if (!active) {
+    const modes = el('div', 'modes');
+    [[false, '🎯 練習前 8 句（唸完得 🎤 貼紙）'], [true, '🏆 挑戰整首（80% 過關得 ⭐＋👑 貼紙）']].forEach(([v, label]) => {
+      const b = el('button', 'ghost' + (singAll === v ? ' on' : ''), label);
+      b.onclick = () => { singAll = v; setMode('sing') };
+      modes.append(b);
+    });
+    box.append(modes, el('p', '', msg || (makeup ? '回去補唸漏掉的句子 🔙' : '按 ▶ 播放，聽完一句會停下來換你唸 🎤')),
+      el('p', 'note', '聲音只在這台裝置上辨識，不會傳出去。'));
+    return;
+  }
+  const s = active, btn = (label, fn, cls) => { const b = el('button', cls, label); b.onclick = fn; return b };
+  const sent = el('div', 'sent');
+  if (s.result) s.result.words.forEach(w => {
+    const sp = el('span', 'sw-' + w.ok, w.t);
+    if (w.ok === 'miss') sp.onclick = () => sayWord(norm(w.t));
+    sent.append(sp, ' ');
+  });
+  else sent.textContent = lines[s.i].text;
+  box.append(sent, el('div', 'zhq', TR[lines[s.i].text] || ''));
+  if (msg) box.append(el('p', '', msg));
+  const listen = btn('🔁 再聽一次', () => { player.seekTo(lines[s.i].t + offset - 0.3, true); player.playVideo() }, 'ghost');
+  if (s.state === 'rec') {
+    const bar = el('div', 'lvlbar'), lvl = el('div'); lvl.id = 'lvl'; bar.append(lvl);
+    box.append(el('p', '', '🎤 我在聽…'), bar, btn('✅ 唸完了', () => stopRec && stopRec(), 'mic rec'));
+  } else if (s.state === 'busy') box.append(el('p', '', '聽聽看你唸得怎麼樣…'));
+  // 過關後也能再試（保留過關紀錄，重唱沒過也不會被取消）
+  else if (s.state === 'pass') box.append(el('p', 'big-ok', '⭐ 過關！'), btn('▶ 下一句', nextStop, 'mic'), btn('🎤 再試一次', () => startSing(s), 'mic ghost'));
+  else if (s.state === 'fail') {
+    const miss = s.result.words.filter(w => w.ok === 'miss').slice(0, 2).map(w => norm(w.t));
+    box.append(el('p', '', miss.length ? `差一點！這幾個字再唸清楚一點：${miss.join('、')}（點橘色的字聽聽看）` : '差一點！再試一次'),
+      btn('🎤 再試一次', () => startSing(s), 'mic'), listen,
+      btn(s.tries >= 3 && !singAll ? '⏭ 跳過（不扣分）' : '⏭ 先跳過', nextStop, 'ghost'));
+  } else box.append(btn('🎤 換你唸', () => startSing(s), 'mic'), listen);
+}
+
+async function startSing(s) {
+  speechSynthesis.cancel(); wordAudio.pause();
+  s.state = 'rec'; renderQBox();
+  const retry = m => { if (active === s) { s.state = 'ready'; renderQBox(m) } };
+  let audio, text;
+  try { audio = await record(v => { const b = $('lvl'); if (b) b.style.width = Math.min(100, v * 800) + '%' }) }
+  catch (e) { return retry(e.name === 'NotAllowedError' ? '麥克風被擋住了，請在瀏覽器的網站設定裡允許使用麥克風。' : '麥克風打不開：' + e.message) }
+  if (active !== s) return;
+  if (!audio) return retry('好像沒聽到喔，靠近一點再唸一次 🎤');
+  s.state = 'busy'; renderQBox();
+  try { text = await transcribe(audio) } catch { return retry('辨識失敗了，再試一次') }
+  if (active !== s) return;
+  if (!text) return retry('好像沒聽到喔，靠近一點再唸一次 🎤');
+  s.result = scoreLine(lines[s.i].text, text);
+  if (s.result.score >= 0.7) { s.passed = true; s.state = 'pass'; $('L' + s.i).classList.add('ok') }
+  else { s.tries++; s.state = 'fail' }
+  renderQBox();
+}
+
+function nextStop() {
+  active.done = true; active = null;
+  renderQBox();
+  const left = qs.find(x => !x.done);
+  if (!left) { player.pauseVideo(); finishQuiz() }
+  else if (makeup) jumpTo(left);
+  else player.playVideo();  // 在點擊當下播放，iOS 才不會擋
+}
+
+function finishSing() {
+  const passed = qs.filter(q => q.passed).length, score = Math.round(passed / qs.length * 100);
+  const missed = [...new Set(qs.flatMap(q => (q.result?.words || []).filter(w => w.ok === 'miss').map(w => norm(w.t)).filter(w => !STOP.has(w))))].slice(0, 8);
+  singSummary = { passed, total: qs.length, score, missed };
+  renderQBox();
+  if (!singAll) return earn('singPractice');
+  if (score >= 80) earn('singAll');  // Whisper 偶爾會聽錯字，所以 80% 句子過關就算
+}
+
+// 每首歌的獎勵：星星共 4 顆（聽完、唱整首、填填看普通、填填看挑戰），每項只拿一次、拿到就不會不見
+const REWARDS = {
+  listen: { star: true, msg: '🎧 聽完一整首歌了！' },
+  singPractice: { sticker: '🎤', msg: '🎤 練習的 8 句都唸完了！' },
+  singAll: { star: true, sticker: '👑', msg: '🏆 整首歌唱對 80% 以上！' },
+  quizNormal: { star: true, msg: '🙂 填填看「普通」全對！' },
+  quizHard: { star: true, sticker: () => SONG.sticker, msg: '🔥 填填看「挑戰」全對！' },
+  expert: { msg: '💎 填填看「最難」全部一次打對！\n曲子小卡變成金色了 ✨' },
+};
+const STAR_KEYS = Object.keys(REWARDS).filter(k => REWARDS[k].star);
+const starCount = p => STAR_KEYS.filter(k => p[k]).length;
+function earn(key) {
+  const p = prog(), r = REWARDS[key];
+  if (p[key]) return;
+  p[key] = true;
+  const sticker = typeof r.sticker === 'function' ? r.sticker() : r.sticker;
+  if (sticker) kid.stickers.push(sticker);
+  saveKids();
+  const text = r.msg + (r.star ? '\n得到一顆星星 ⭐' : '') + (sticker ? `\n獲得貼紙 ${sticker}` : '');
+  $('starsNow').textContent = starStr(p);
+  $('celeE').textContent = sticker || (r.star ? '⭐' : '💎');
+  $('celeT').innerText = $('cele').hidden ? text : $('celeT').innerText + '\n' + text;  // 連續拿到時疊加顯示
+  $('cele').hidden = false;
+}
+$('celeOk').onclick = () => $('cele').hidden = true;
+const totalStars = k => Object.values(k.songs).reduce((n, p) => n + starCount(p), 0);
+
+// ---------- 雲端存檔／匯入（伺服器 /api/save、/api/load） ----------
+// 純函式（不碰 DOM，#test 會檢查）：組出要上傳的存檔，只放玩家進度，不放 id 和其他裝置資料
+const buildSave = ks => ({ version: 1, savedAt: new Date().toISOString(), players: ks.map(({ name, avatar, songs, stickers }) => ({ name, avatar, songs, stickers })) });
+// 匯入時找這台裝置上同名的小朋友（名字去空白後比對）
+const sameName = (ks, name) => ks.find(k => k.name.trim() === name.trim());
+// 讀回來的資料不可信：格式不對回 null；songs、stickers 有怪東西就丟掉，避免畫面壞掉
+function cleanSave(d) {
+  if (!d || !Array.isArray(d.players) || !d.players.every(p => p && typeof p.name === 'string' && p.name.trim())) return null;
+  const isObj = o => o && typeof o === 'object' && !Array.isArray(o);
+  return d.players.map(p => ({
+    name: p.name.trim(),
+    avatar: typeof p.avatar === 'string' && p.avatar ? p.avatar : AVATARS[0],
+    songs: isObj(p.songs) ? Object.fromEntries(Object.entries(p.songs).filter(([, v]) => isObj(v))) : {},
+    stickers: Array.isArray(p.stickers) ? p.stickers.filter(s => typeof s === 'string') : [],
+  }));
+}
+const len = s => [...s].length;  // 以字為單位（emoji 算一個字），和伺服器一致
+const NET_ERR = '存檔伺服器連不到，請稍後再試';
+const MSG = {
+  save: { 401: '這個名字已經有人用了，或密碼不對', 429: '錯太多次了，請 10 分鐘後再試', 400: '名字要 1～20 個字、密碼至少 4 個字' },
+  load: { 401: '密碼不對喔', 404: '找不到這個名字的存檔', 429: '錯太多次了，請 10 分鐘後再試', 400: '名字要 1～20 個字、密碼至少 4 個字' },
+};
+async function postJSON(url, body) {
+  try {
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    let j = {}; try { j = await r.json() } catch {}
+    return { status: r.status, ok: r.ok, j };
+  } catch { return { status: 0, ok: false, j: {} } }
+}
+let cloudKind = 'save';
+function openCloud(kind) {
+  cloudKind = kind;
+  $('cloudT').textContent = kind === 'save' ? '💾 把進度存到雲端' : '📥 從雲端匯入進度';
+  $('cloudName').value = store.get('cloudName', '');
+  $('cloudPw').value = '';
+  $('cloudFields').hidden = $('cloudOk').hidden = false;
+  $('cloudX').textContent = '取消';
+  cloudMsg('');
+  $('cloud').showModal();
+  ($('cloudName').value ? $('cloudPw') : $('cloudName')).focus();  // 游標移到第一個空白欄位
+}
+const cloudMsg = (s, bad) => { $('cloudMsg').textContent = s; $('cloudMsg').classList.toggle('bad', !!bad) };
+const cloudDone = s => { cloudMsg(s); $('cloudFields').hidden = $('cloudOk').hidden = true; $('cloudX').textContent = '關閉'; $('cloudX').focus() };
+$('saveBtn').onclick = () => openCloud('save');
+$('toLoad').onclick = () => openCloud('load');
+$('cloudX').onclick = () => $('cloud').close();
+// 同名時讓家長選：回傳 true 代表用存檔的進度；按 Esc 當成保留這台
+const askWhich = (mine, theirs) => new Promise(res => {
+  const desc = k => `⭐ ${totalStars(k)}\n貼紙：${k.stickers.join(' ') || '還沒有'}`;
+  $('askT').textContent = `這台裝置已經有「${mine.name}」了，要用哪一份進度？`;
+  $('askCloud').innerText = '☁️ 存檔的進度\n' + desc(theirs);
+  $('askHere').innerText = '📱 這台的進度\n' + desc(mine);
+  $('ask').returnValue = '';
+  $('ask').onclose = () => res($('ask').returnValue === 'cloud');
+  $('ask').showModal();
+});
+$('cloudForm').onsubmit = async e => {  // 按 Enter 也會走這裡
+  e.preventDefault();
+  const ok = $('cloudOk');
+  if (ok.disabled) return;
+  const name = $('cloudName').value.trim(), password = $('cloudPw').value;
+  if (len(name) < 1 || len(name) > 20) { cloudMsg('名字要 1～20 個字', true); return $('cloudName').focus() }
+  if (len(password) < 4 || len(password) > 64) { cloudMsg('密碼要 4～64 個字', true); return $('cloudPw').focus() }
+  store.set('cloudName', name);  // 只記名字，不記密碼
+  ok.disabled = true; ok.textContent = '處理中…'; cloudMsg('');
+  try {
+    if (cloudKind === 'save') {
+      const r = await postJSON('/api/save', { name, password, data: buildSave(kids) });
+      if (r.ok) return cloudDone(r.j.created ? '存好了！下次用同樣的名字和密碼就能匯入' : '存好了！');
+      return cloudMsg(MSG.save[r.status] || NET_ERR, true);
+    }
+    const r = await postJSON('/api/load', { name, password });
+    if (!r.ok) return cloudMsg(MSG.load[r.status] || NET_ERR, true);
+    const players = cleanSave(r.j.data);
+    if (!players) return cloudMsg('存檔格式不對', true);
+    let added = 0, updated = 0;
+    for (const p of players) {
+      const mine = sameName(kids, p.name);
+      if (!mine) { kids.push({ id: Date.now() + added, ...p }); added++ }
+      else if (await askWhich(mine, p)) { Object.assign(mine, { avatar: p.avatar, songs: p.songs, stickers: p.stickers }); updated++ }
+    }
+    saveKids(); renderKids();
+    cloudDone(`匯入完成：新增 ${added} 位、更新 ${updated} 位`);
+  } finally { ok.disabled = false; ok.textContent = '確定' }
+};
+
+renderKids();
+
+// 自我檢查：網址加上 #test 後打開，看 console
+if (location.hash === '#test') {
+  // 測試資料一律用假句子，不能用真實歌詞（公開儲存庫）
+  const L = parseLRC('[00:01.00] hello snow\n[00:03.5]\n[01:02.25] the cold wind\n[01:05.00] We can go, we can go');
+  console.assert(L.length === 3 && L[1].t === 62.25 && L[0].end === 62.25, 'parseLRC');
+  const Q = pickQuestions(L, ['snow', 'cold', 'go', 'sky']);
+  console.assert(Q.length === 2 && Q[0].w === 'snow' && Q[1].w === 'go' && Q[1].k === 2, 'pickQuestions', Q);
+  console.assert(Q.every(q => q.opts.length === 3 && q.opts.includes(q.w)), 'options');
+  console.assert(norm('Go,') === 'go' && lookup('tears') && lookup('snows') === DICT.snow, 'norm/lookup');
+  const S1 = scoreLine('We can go, we can go', 'we can go we can go');
+  console.assert(S1.score === 1 && S1.words.every(w => w.ok === 'exact'), 'scoreLine exact', S1);
+  const S2 = scoreLine('The lamp glows bright on the desk tonight', 'the lamp glow bright on the desk');
+  console.assert(S2.score === 6.5 / 8 && S2.words[2].ok === 'near' && S2.words[7].ok === 'miss', 'scoreLine near/miss', S2);
+  console.assert(scoreLine("Don't let the cat in", 'do not let the cat in').score === 1, 'scoreLine contraction');
+  console.assert(scoreLine('We can go', '').score === 0, 'scoreLine empty');
+  console.assert(scoreLine('The lamp glows', 'the lamp-glows.').score === 1, 'scoreLine hyphen');
+  const SV = buildSave([{ id: 1, name: '小明', avatar: '🐱', songs: { letitgo: { listen: true } }, stickers: ['🎤'] }]);
+  console.assert(SV.version === 1 && SV.savedAt && SV.players.length === 1 && !('id' in SV.players[0]) && SV.players[0].songs.letitgo.listen, 'buildSave', SV);
+  console.assert(sameName([{ name: ' 小明 ' }], '小明 ') && !sameName([{ name: '小明' }], '小華') && cleanSave({ players: [{ name: 1 }] }) === null
+    && cleanSave({ players: [{ name: ' 小華 ', songs: { a: null, b: {} }, stickers: 'x' }] })[0].name === '小華', 'sameName/cleanSave');
+  console.log('selftest done');
+}
+</script>
+<script src="https://www.youtube.com/iframe_api"></script>
+</body>
+</html>
