@@ -1,0 +1,13 @@
+<div class="bar">
+  <h1>🎵 唱歌學英文</h1>
+  <button type="button" class="ghost" routerLink="/help">❓ 遊戲說明</button>
+  <button type="button" class="ghost">📥 匯入</button>
+</div>
+<p>誰要玩呢？</p>
+<ul>
+  @for (k of store.kids(); track k.id) {
+    <li><a [routerLink]="['/kids', k.id]">{{ k.avatar }} {{ k.name }}</a></li>
+  }
+</ul>
+<label>名字：<input #name maxlength="10" placeholder="例如：小明" /></label>
+<button type="button" (click)="add(name)">好了！</button>
