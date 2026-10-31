@@ -2,6 +2,17 @@
 
 > 功能規格 = `legacy/index.html`（舊 demo，約 1100 行）。Angular 版要**行為完全一致**，有疑問以舊版為準（容易漏的細節見 §5.5）。
 > 原則：最簡單可行、不做沒要求的抽象、平台內建優先（`<dialog>`、`prompt()`、`confirm()`、Web Audio、`speechSynthesis`、CSS 動畫），**不加 UI 套件、不加狀態管理套件**。
+> API 規格以 TPM 的 **API contract v2** 為準；與本文件衝突時以它為準。
+
+## 0. 設計審查後的 PO 決定（2026-11-01，已反映到下面各節）
+
+1. **歌詞和整句翻譯改從我們的後端拿**：`GET ${apiBaseUrl}/api/songs/{songId}/content` → `{ lrc, translations }`。前端不再呼叫 LRCLIB、MyMemory；`Lyrics`、`Translation` 服務取消，改為 `Api.content()`（§4）。家長在本機修改的翻譯仍存 `tr_<songId>`，**覆蓋**伺服器翻譯。歌詞與譯文不放進儲存庫任何檔案（版權＋公開 repo）。
+2. **填填看題目單字每首歌手動列**：`song.quiz = { normal: string[], hard: string[], expert: string[] }`（10／20／20 字）。出題規則見 §5.1（取代舊的規則推導）。
+   - ⚠️ `letitgo.json` 的 `quiz` 是**暫用清單**：用 legacy 規則對目前 LRCLIB 歌詞實際跑出來的字（含重複的 `go`、`let`），等教育顧問的正式清單替換。
+3. **名字長度**：小朋友名字、雲端存檔名字都是去空白後 **1～10 字**（`[...s].length`）。密碼 4～64 不變。
+4. **星星分歌顯示**（不再跨歌加總；`totalStars` 不搬）；**貼紙每首歌都能拿**：一首歌一個 🎤／👑／專屬貼紙，`kid.stickers` 可重複。
+5. **網域**：舊版進度用 💾 雲端存檔搬到新版，不寫搬移程式。
+6. **💾 存檔按鈕要和同一列的其他按鈕上下對齊**：做法見 §3「第一列對齊」。
 
 ---
 
@@ -17,7 +28,7 @@ english song/
 
 | | frontend | backend |
 |---|---|---|
-| 負責 | 所有畫面、遊戲邏輯、歌曲資料（`public/songs/`）、外部 API（YouTube、LRCLIB、MyMemory、字典、Whisper） | 帳號＋存檔 API、密碼雜湊、限流、CORS（`ALLOWED_ORIGINS`，預設 `http://localhost:4200`，已完成） |
+| 負責 | 所有畫面、遊戲邏輯、歌曲資料（`public/songs/`）、外部 API（YouTube、字典、Whisper） | 帳號＋存檔 API、歌詞＋翻譯 API（content.db）、密碼雜湊、限流、CORS（`ALLOWED_ORIGINS`，預設 `http://localhost:4200`，已完成） |
 | 部署 | Railway 服務 A（靜態檔） | Railway 服務 B（見 §12） |
 | 本機開發 | `ng serve` → http://localhost:4200 | 埠 **8001**（8000 被舊 demo 的靜態伺服器佔用） |
 
@@ -37,6 +48,7 @@ ng new frontend \
 - `--ai-config=claude-code`：本機 CLI 22.2 的選項名稱是 `claude-code`。
 - `--skip-git`：git 放在專案根目錄（frontend 與 backend 同一個 repo）。
 - 檔名用預設 2025 風格：`kid-picker.ts` / class `KidPicker`，無 `.component` 後綴；型別檔用 `.model.ts`。
+- 實際執行（Angular CLI 22.2.1）：上面的參數與 `ng new --help` 完全相符，原樣執行即可。元件用 `ng g component features/<區>/<名> --flat`、服務用 `ng g service core/<名>`、型別用 `ng g interface core/models/<名> --type=model` 產生。
 
 ---
 
@@ -49,7 +61,7 @@ ng new frontend \
 | `/` | `KidPicker` 選小朋友 | 直接載入 | 首頁 |
 | `/help` | `Help` 遊戲說明 | `loadComponent` | |
 | `/kids/:kidId` | `SongList` 選歌 | 直接載入 | guard：kid 不存在 → 回 `/` |
-| `/kids/:kidId/play/:songId` | `Play` 遊玩 | `loadComponent`（最大的一塊，含唱唱看） | guard 同上；歌不存在 → 回選歌 |
+| `/kids/:kidId/play/:songId` | `Play` 遊玩 | `loadComponent`（最大的一塊，含唱唱看） | guard 同上；歌不在 `songs/index.json`（或清單讀不到）→ 回選歌 |
 | `**` | → `/` | | |
 
 - kidId 放網址，重新整理不會掉人，不需要另存「目前小朋友」。
@@ -90,7 +102,7 @@ src/app/
 直接寫在 `play.html` 的 `<details>`，`(toggle)` 同步到 `session.parentOpen`，`lyrics-panel` 依此決定中文能不能點（`prompt()` 修改）。不另拆元件。
 
 ### cloud-dialog（Signal Forms）
-- 名字、密碼用 `form()`＋`validate()`。字數一律用 **`[...value.trim()].length`**（emoji 算 1 個字）計算：名字 1–20、密碼 4–64（密碼不 trim，與後端相同）。與舊版 `len()` 和後端驗證一致。
+- 名字、密碼用 `form()`＋`validate()`，規則直接用 `core/game/text.ts` 的 `nameOk()`（去空白後 **1～10 字**，`[...s].length`，emoji 算 1 個字）與 `passwordOk()`（4–64，不 trim）。與後端（API v2）一致；`kid-picker` 新增小朋友也用同一個 `nameOk()`（`KidsStore.add()` 內也會再檢查）。
 - 同名比較：對每位同名玩家依序 `await` 一個 Promise，第二個 `<dialog>` 的 `close` 事件 resolve；Esc＝保留這台。
 
 ### iOS 手勢規則（所有元件都適用）
@@ -98,6 +110,10 @@ src/app/
 - 不可以「點擊 → 改 signal → `effect` 再播放」。
 - 最難模式打字題：`submit()` 是**同步**函式（`(keydown.enter)` 與「確定」按鈕都直接呼叫），比對答案後同步呼叫 `session.answer()`，`answer()` 內同步 `player.play()`。中間不能有 `await`、`setTimeout`、Promise。
 - 選擇題、「下一句」、「再聽一次」同理。
+- 唱唱看「🎤 換你唸」：click handler **同步**呼叫 `SpeechRecognizer.record()`，之前不能有任何 `await`（模型要先在切到唱唱看時 `load()`，不要點擊時 `await load()` 再錄）。`record()` 本身也要在第一個 `await` 前同步做完 `getUserMedia()` 與 `new AudioContext()`。介面與註解已寫在 `core/speech-recognizer.ts`。
+
+### 第一列對齊（💾 存檔）
+💾 放在 `app.html` 外框（`.shell` 是 `position: relative`、`max-width: 1100px`、`padding: 16px`），`.save` 絕對定位在右上、高 `--top-row`（56px）並垂直置中。每個畫面的**第一個元素一律是 `<div class="bar">`**（`styles.css`）：`min-height: --top-row`、`align-items: center`、右邊留 110px；直接放在 `.bar` 裡的按鈕上下各補 4px、其他子元素（h1、分頁、星星）撐到 56px 置中。所以不管換不換行，第一行的中心線都和 💾 一樣（已在 375px 與 1200px 寬實測：中心都在 y=44）。第二波改畫面時不要拿掉 `.bar` 或改它的 margin-top。
 
 ---
 
@@ -107,17 +123,16 @@ src/app/
 
 | 檔案（`core/`） | Class | 責任 |
 |---|---|---|
-| `app-config.ts` | `APP_CONFIG`（InjectionToken）| 執行期設定 `{ apiUrl }`（§6） |
+| `app-config.ts` | `APP_CONFIG`（InjectionToken）、`checkConfig()` | 執行期設定 `{ apiBaseUrl }`（§6） |
 | `storage.ts` | （函式）`load(k, d)`／`save(k, v)` | localStorage JSON 讀寫，全部 try/catch。純函式 |
-| `kids-store.ts` | `KidsStore` | `kids` signal、`byId()`、新增／刪除、匯入合併；每次變更寫回 `kids`；啟動時跑 `rewardsV2` 一次性歸零 |
-| `song-catalog.ts` | `SongCatalog` | `httpResource` 讀 `songs/index.json`、`songs/dict.json`；`song(id)` 用 `httpResource` 讀 `songs/<id>.json`，合併字典 |
-| `lyrics.ts` | `Lyrics` | LRCLIB：先 `/api/get/<lrclibId>`，失敗或無 synced 改 `/api/search`；`retry({count:3, delay})`；快取 `lrc_<songId>`；回傳 `parseLrc()` 結果。（有快取＋備援，所以不用 httpResource） |
-| `translation.ts` | `Translation` | MyMemory 逐句翻譯（3 條並行）、`tr_<songId>` 快取、家長修改；對外 `Record<英文句, 中文>` signal |
+| `kids-store.ts` | `KidsStore` | `kids` signal、`byId()`、`add()`（`nameOk` 檢查）／`remove()`／`update(id, fn)`；每次變更產生新陣列並寫回 `kids`；啟動時跑 `rewardsV2` 一次性歸零。匯入合併由 cloud-dialog 用 `add()`／`update()` 組 |
+| `song-catalog.ts` | `SongCatalog` | `ids()`：`HttpClient` 讀 `songs/index.json`（Promise 快取，失敗不快取），**guard 用它判斷歌是否存在**；`songs`：`resource()` 抓清單上每首 json，給選歌畫面；`dict`：`httpResource` 讀 `songs/dict.json`。**沒有** `song(id)` 方法——單首歌由 `Play` 元件自己的 field `httpResource(() => \`songs/${songId()}.json\`)` 建立 |
+| `api.ts` | `Api` | 後端：`save()`／`load()`（`POST ${apiBaseUrl}/api/save|load`，HTTP 狀態 → 中文訊息，見 §5.5）、`content(songId)`（`GET /api/songs/{id}/content` → `parseLrc` ＋ 翻譯疊上本機 `tr_<songId>`；404 →「這首歌的歌詞還沒準備好」、其他 →「歌詞抓不到…」）。失敗一律丟 `Error(中文訊息)`。`Play` 用 field `resource({ params: songId, loader: api.content })`，重試＝`reload()` |
+| `translations.ts` | （函式）`localTranslations(songId)`／`saveTranslation(songId, line, zh)` | 家長修改的翻譯（`tr_<songId>`） |
 | `pronunciation.ts` | `Pronunciation` | `say(word)`：Free Dictionary → Wikimedia Commons mp3（`aud2` 快取，`''`=查過沒有；網路錯誤不記）→ 失敗用 `speechSynthesis`（挑自然聲音、避開趣味聲音、rate 0.8）。含 iOS 首次 pointerdown 靜音解鎖、`prefetch(words)` 每 500ms 查一個 |
 | `youtube-player.ts` | `YoutubePlayer` | 見下 |
 | `speech-recognizer.ts` | `SpeechRecognizer` | `record(onLevel)`（RMS 0.015、停 1.2 秒／最長 8 秒／4 秒沒聲音、有聲 <0.4 秒視為沒唸）、`to16k`、`load()`（CDN import、進度 `note` signal、暖機；失敗可重試）、`transcribe()`（前後補 0.5 秒靜音、過濾幻覺字串）、`stop()` |
-| `cloud-save.ts` | `CloudSave` | `save()`／`load()` → `POST ${apiUrl}/api/...`；HTTP 狀態 → 中文訊息（§5.5） |
-| `rewards.ts` | `Rewards` | `earn(kidId, songId, key)`：每項只拿一次、加貼紙、存檔、推送 `celebration` signal |
+| `rewards.ts` | `Rewards` | `earn(kidId, song, key)`：每首歌每項只拿一次、加貼紙（每首歌各一份）、存檔、推送 `celebration` signal（連續獲得時文字疊加）；`dismiss()` |
 | `play-session.ts` | `PlaySession` | 遊玩狀態與流程（見下） |
 
 ### `YoutubePlayer`（不依賴 PlaySession，沒有循環依賴）
@@ -161,14 +176,14 @@ export interface SongVideo {
 export interface Song {
   id: string;        // 檔名＝id，只能 [a-z0-9-]
   title: string; artist: string; from: string; emoji: string;
-  lrclibId: number;  // LRCLIB 的歌詞 id
-  search: string;    // lrclibId 抓不到時的搜尋字
   videos: SongVideo[];             // 第一支為預設
   sticker: string;                 // 填填看「挑戰」全對的專屬貼紙
-  quiz: string[];                  // 填填看關鍵字（普通難度的來源）
+  quiz: Record<QuizLevel, string[]>; // 每個難度手動列的題目單字（普通 10、挑戰 20、最難 20）
   dict?: Record<string, string>;   // 這首歌專用／覆蓋共用字典的解釋
 }
+// 歌詞與翻譯不在 Song 裡（版權），由 Api.content() 從後端拿
 export interface LyricLine { t: number; end: number; text: string }
+export interface SongContent { lines: LyricLine[]; translations: Record<string, string> }
 export type QuizLevel = 'normal' | 'hard' | 'expert';
 export type PlayMode = 'listen' | 'quiz' | 'sing';
 
@@ -183,17 +198,18 @@ export interface Kid {
 }
 
 // save-data.model.ts（雲端存檔格式，跟後端約定）
-export interface SavedPlayer { name: string; avatar: string; songs: Record<string, SongProgress>; stickers: string[] }
+export type SavedPlayer = Omit<Kid, 'id'>;
 export interface SaveData { version: 1; savedAt: string; players: SavedPlayer[] }
 ```
 
-### 5.1 填填看各難度怎麼出題（規則留在程式，跟舊版一樣）
-內容工程師只維護 `quiz` 和字典，難度由 `core/game/quiz.ts` 推導：
-- `pool` = 合併字典的字，去掉 STOP 字、含 `'` 的字、少於 3 字母的字
-- 普通：主字 = `quiz` 中 ≤5 字母者，10 題，無備用
-- 挑戰：主字 = `pool` 中 ≥5 字母且不在普通名單，備用 = `pool`，20 題
-- 最難：主字 = `pool` 中 ≥6 字母，備用 = 挑戰主字＋`pool`，20 題（打字）
-- 共同：每字最多考 2 次、題目間隔 ≥ max(1, 句數/(題數+1))
+### 5.1 填填看出題（PO 決定：每首歌手動列字）
+`song.quiz.normal`（10 字）／`hard`（20 字）／`expert`（20 字）由教育顧問挑。`core/game/quiz.ts` 的 `pickQuestions(lines, song.quiz[level])`：
+- 依清單順序，每個字找**第一句「包含這個字（`norm` 後整詞相同）、而且還沒被用過」**的歌詞出題；同一個字列兩次就會找兩句不同的。
+- 找不到就略過並 `console.warn`（所以題數可能少於清單字數，內容工程師看 console 修清單）。
+- 結果依句子順序排列。
+- 選項：答案＋同一個難度清單裡的 2 個干擾字（去重、不含答案），洗牌。
+- 舊版的 QUIZ_POOL、EASY/HARD_WORDS、每字最多 2 次、題目間隔規則全部取消。
+- ⚠️ `public/songs/letitgo.json` 的 `quiz` 是**暫用清單**（legacy 規則對目前 LRCLIB 歌詞實際產生的字），教育顧問的正式清單出來後直接替換該 JSON。
 
 ### 5.2 單字中文字典
 - `public/songs/dict.json`：**所有歌共用**的 `{ word: 中文 }`（舊版 `DICT` 全部搬進來）。
@@ -206,11 +222,16 @@ public/songs/index.json   # ["letitgo", ...]  選歌畫面的順序
 public/songs/letitgo.json # Song
 public/songs/dict.json    # 共用字典
 ```
-理由：公開的靜態內容，不需權限；跟著前端版本發佈、走快取；後端只管存檔。加歌＝加 json＋改 index.json＋重新部署前端。
+理由：公開的靜態內容，不需權限；跟著前端版本發佈、走快取。加歌＝加 json＋改 index.json＋重新部署前端，**再**由內容工程師把歌詞與翻譯放進後端 content.db（`POST /api/admin/content`）。
+**歌詞與翻譯絕對不放進 `public/` 或任何 commit 的檔案。**
 > ponytail：index 只列 id、選歌時每首 json 都抓；超過幾十首再讓 index 帶卡片摘要。
 
 ### 5.4 存檔與匯入
-`core/game/save-data.ts`：`buildSave(kids)`（不含 id）、`cleanSave(data)`（不可信資料，格式錯回 null、丟掉怪的 songs／stickers）、`sameName(kids, name)`（去空白比對）。
+`core/game/save-data.ts`：`buildSave(kids)`（不含 id）、`cleanSave(data)`（不可信資料，格式錯回 null、丟掉怪的 songs／stickers）、`sameName(kids, name)`（去空白比對；後端名字不分大小寫，前端比對維持舊版的區分大小寫）。
+
+### 5.4.1 獎勵顯示（PO 決定）
+- 星星**分歌顯示**：每首歌用 `starStr(kid.songs[id])`；不做跨歌總數（`totalStars` 不搬）。小朋友卡片、同名比較 dialog 改列各歌星星（第二波決定版面）。
+- 貼紙每首歌都能拿：`Rewards.earn()` 以 `kid.songs[song.id][key]` 判斷，所以每首歌各給一次 🎤／👑／`song.sticker`，`kid.stickers` 依獲得順序累積、可重複。
 
 ### 5.5 必須照舊版保留的細節（容易漏）
 - **填填看換難度**：只有「還沒答任何一題」或「這局已結束」才顯示難度按鈕，答到一半不能換。
@@ -219,13 +240,13 @@ public/songs/dict.json    # 共用字典
 - **唱唱看過關後重唱**：保留 `passed`，重唱沒過也不取消過關。
 - **唱唱看結算**：練習唸完即得 🎤；挑戰 80% 句子過關得 ⭐＋👑。總結不顯示分數。
 - **換歌**：`videoIndex` 重設為 0（§4 `open`）。
-- **歌詞抓不到**：`play.ts` 顯示「歌詞抓不到 😢 請確認網路後再試一次。」＋「重試」按鈕，重新呼叫 `Lyrics.load()`。
+- **歌詞抓不到**：`play.ts` 顯示 `content.error().message`（「歌詞抓不到 😢 請確認網路後再試一次。」；後端 404 時為「這首歌的歌詞還沒準備好 😢」）＋「重試」按鈕 → `content.reload()`。
 - **影片無法播放**：顯示「這支影片沒辦法在這裡播放，請在上面換另一個影片版本。」
 - **雲端錯誤訊息**（舊版 `MSG` 再加兩個）：
 
 | 狀態 | 存檔 | 匯入 |
 |---|---|---|
-| 400 | 名字要 1～20 個字、密碼至少 4 個字 | 同左 |
+| 400 | 名字要 1～10 個字、密碼至少 4 個字 | 同左 |
 | 401 | 這個名字已經有人用了，或密碼不對 | 密碼不對喔 |
 | 404 | — | 找不到這個名字的存檔 |
 | 413 | 存檔太大了，請聯絡家長或管理者 | — |
@@ -241,25 +262,21 @@ public/songs/dict.json    # 共用字典
 
 ```ts
 // public/config.json（開發用，直接指本機後端；後端 CORS 預設已允許 http://localhost:4200）
-{ "apiUrl": "http://localhost:8001" }
+{ "apiBaseUrl": "http://localhost:8001" }
 
-// main.ts
+// main.ts（實際程式見 src/main.ts）
 fetch('config.json', { cache: 'no-store' })
   .then(r => { if (!r.ok) throw new Error(`config.json ${r.status}`); return r.json(); })
-  .then((cfg: AppConfig) => {
-    if (typeof cfg.apiUrl !== 'string' || !cfg.apiUrl) throw new Error('config.json 缺少 apiUrl');
-    return bootstrapApplication(App, {
-      ...appConfig,
-      providers: [...appConfig.providers, { provide: APP_CONFIG, useValue: cfg }],
-    });
-  })
-  .catch(e => {
-    document.body.textContent = '設定檔讀不到，請重新整理或聯絡管理者。';
-    console.error(e);
-  });
+  .then(checkConfig)                       // 缺 apiBaseUrl 丟錯；去掉結尾 /
+  .then(
+    cfg => bootstrapApplication(App, { ...appConfig, providers: [...appConfig.providers, { provide: APP_CONFIG, useValue: cfg }] })
+      .catch(fail('程式啟動失敗，請重新整理，還是不行請聯絡管理者。')),   // bootstrap 本身失敗
+    fail('設定檔讀不到，請重新整理或聯絡管理者。'),                       // config.json 讀不到／格式錯
+  );
 ```
 
-- **讀不到或缺 `apiUrl` 一律明確報錯、不啟動**，不默默用空字串。
+- 設定鍵名是 **`apiBaseUrl`**（TPM 指定；原稿的 `apiUrl` 已改）。部署的環境變數仍叫 `API_URL`，寫入時轉成 `{"apiBaseUrl": "$API_URL"}`。
+- **讀不到或缺 `apiBaseUrl` 一律明確報錯、不啟動**，不默默用空字串。config 錯誤與 bootstrap 失敗**分開顯示不同訊息**（Reviewer 第二次審查），兩者都 `console.error` 原始錯誤。
 - 部署：前端啟動指令先用環境變數覆寫輸出資料夾裡的 `config.json`；`API_URL` 沒設就讓啟動失敗（§12）。
 - 不需要 dev proxy（後端已開 CORS）。
 
@@ -273,15 +290,14 @@ fetch('config.json', { cache: 'no-store' })
 |---|---|---|
 | `kids` | `Kid[]` | `KidsStore` |
 | `rewardsV2` | `true`：獎勵改版歸零已做過 | `KidsStore`（啟動檢查，沒有就清空每人 songs／stickers，保留名字頭像） |
-| `lrc_<songId>` | LRCLIB 原始 LRC 字串 | `Lyrics` |
-| `tr_<songId>` | `{ 英文句: 中文 }`（機翻＋家長修改） | `Translation` |
+| `tr_<songId>` | `{ 英文句: 中文 }`（家長修改；覆蓋後端翻譯） | `translations.ts`（`saveTranslation`），`Api.content()` 讀 |
 | `aud2` | `{ word: mp3網址 \| '' }` | `Pronunciation` |
 | `off_<videoId>` | 該影片的歌詞時間差（家長調過才有） | `PlaySession` |
 | `cloudName` | 上次輸入的雲端名字（不存密碼） | `CloudDialog` |
 
 - **localStorage 綁網域。** Angular 版若換了網址，舊進度「看不到」。格式相容，所以：
   1. 新版用跟舊版**相同的網域** → 零搬移；或
-  2. 換網域 → 家長在舊版 💾 存檔、到新版 📥 匯入（現成功能，不寫搬移程式）。→ 待 PO 決定。
+  2. 換網域 → 家長在舊版 💾 存檔、到新版 📥 匯入（現成功能，不寫搬移程式）。→ **PO 已決定採 2**（§0）。
 
 ---
 
@@ -293,16 +309,16 @@ fetch('config.json', { cache: 'no-store' })
 | 檔案 | 一定要測 |
 |---|---|
 | `lrc.spec.ts` | 時間解析、空白行略過、排序、`end` 規則 |
-| `quiz.spec.ts` | `pickQuestions`：主字優先、備用字、每字最多 2 次、間隔、選項 3 個含答案；三種難度字表推導 |
+| `quiz.spec.ts` | `pickQuestions`（§5.1 新規則）：句子不重複用、同字兩次找兩句、依句子排序、干擾字來自同一清單、找不到略過＋warn、選項 3 個含答案。舊版 `#test` 的同一組字改為預期 3 題（新規則無間隔限制，`cold` 也會出題） |
 | `scoring.spec.ts` | `scoreLine`：全對、near 半分、miss、縮寫展開、連字號、空字串；`charDist` |
-| `text.spec.ts` | `norm`、`lookup`（複數退回原形） |
+| `text.spec.ts` | `norm`、`lookup`（複數退回原形）、`nameOk`（1～10 字、emoji、空白）、`passwordOk` |
 | `save-data.spec.ts` | `buildSave` 不含 id；`cleanSave` 各種壞資料；`sameName` 去空白 |
 | `reward-rules.spec.ts` | `starCount`、星星字串（⭐☆ 與 👑）、專屬貼紙 |
 
 服務測試（只測有分支的）：
 - `play-session.spec.ts`：`{ provide: YoutubePlayer, useValue: fakePlayer }`（記錄 play/pause/seek 呼叫）、假的 `Rewards`／`SpeechRecognizer`，直接呼叫 `onTick(t)` 推進時間，驗證：到句尾會 pause 並設 `active`；答對後 play；跳過的題目在最後進入補答並 seek 回去；全一次答對才 `earn`、有錯不 earn；答過題後不能換難度；換歌時 `videoIndex` 歸零；聽完 80% earn('listen') 只一次。
-- `cloud-save.spec.ts`：`HttpTestingController` 驗 200／400／401／404／413／429／500／網路錯誤 → 訊息。
-- `kids-store.spec.ts`：`rewardsV2` 只跑一次、匯入同名合併。
+- `api.spec.ts`：`HttpTestingController` 驗 save／load 的 200／401／404／413／429／500／網路錯誤 → 訊息；`content()` 解析＋本機翻譯覆蓋、404／500 訊息；`checkConfig`。
+- `rewards.spec.ts`：`rewardsV2` 只跑一次、`add()` 名字長度、`earn()` 每首歌每項一次、貼紙每首歌各一份、慶祝文字疊加。
 
 元件、真的 YouTube、麥克風、Whisper 不寫單元測試；改用**手動驗收清單**（照 §5.5 與舊版功能，在 iPad Safari＋桌面 Chrome 逐項點一次）。E2E 先不做。
 
@@ -315,17 +331,18 @@ fetch('config.json', { cache: 'no-store' })
 | `<style>`（8–131） | `src/styles.css`（共用變數、按鈕、card、gold、dialog）＋各元件 `.css` |
 | `SONG`（250） | `public/songs/letitgo.json` |
 | `DICT`（261） | `public/songs/dict.json`（`let`、`go` 的特殊解釋放 `letitgo.json` 的 `dict`） |
-| `STOP`、`QUIZ_POOL`（285–287） | `core/game/text.ts`、`core/game/quiz.ts` |
-| `QUIZ_LEVELS`、`EASY_WORDS`、`HARD_WORDS`（289–295） | `core/game/quiz.ts` |
+| `STOP`（285） | `core/game/text.ts` |
+| `QUIZ_POOL`、`EASY_WORDS`、`HARD_WORDS`（287–295） | 取消（改 `song.quiz` 手動清單，§5.1） |
+| `QUIZ_LEVELS` 的標籤文字（289） | `quiz-panel.ts`（第二波） |
 | `store`（298） | `core/storage.ts` |
 | `kids`、`saveKids`、`prog`、`rewardsV2`（302–310） | `core/kids-store.ts` |
 | `norm`、`lookup`、`shuffle`（315–317） | `core/game/text.ts` |
 | `$`、`el`、`show`（313–318） | 刪除（改模板與路由） |
 | `parseLRC`（320） | `core/game/lrc.ts` → `parseLrc` |
 | `pickQuestions`（332） | `core/game/quiz.ts` |
-| `fetchJSON`（350） | `HttpClient` ＋ rxjs `retry({ count: 3, delay })` |
-| `loadLyrics`（357） | `core/lyrics.ts` |
-| `translateAll`、`setZh`、`editZh`、`TR`（370–395） | `core/translation.ts`（`prompt()` 在 `lyrics-panel.ts`） |
+| `fetchJSON`（350） | 取消（後端同源可控，失敗顯示重試按鈕） |
+| `loadLyrics`、`translateAll`（357–385） | `core/api.ts` 的 `content()`（後端提供歌詞＋翻譯） |
+| `setZh`、`editZh`、`TR`（386–395） | `core/translations.ts`（`prompt()` 在 `lyrics-panel.ts`） |
 | `pickVoice`…`speak`（397–455） | `core/pronunciation.ts` |
 | `record`、`to16k`、`VOICE_RMS`（458–495） | `core/speech-recognizer.ts` |
 | `loadASR`、`transcribe`、`asrNote`（497–524） | `core/speech-recognizer.ts` |
@@ -343,10 +360,11 @@ fetch('config.json', { cache: 'no-store' })
 | `tick`（734） | `PlaySession.onTick()`＋`currentLine` computed；捲動用 `lyrics-panel` 的 `afterRenderEffect` |
 | `renderQBox`、`renderTyping`、`answer`、`jumpTo`、`finishQuiz`（766–855） | `features/play/quiz-panel.ts`（畫面，同步 submit）＋`PlaySession.answer()/finish()` |
 | `renderSing`、`startSing`、`nextStop`、`finishSing`（858–947） | `features/play/sing-panel.ts`＋`PlaySession.startSing()/nextStop()/finish()` |
-| `REWARDS`、`STAR_KEYS`、`starCount`、`totalStars`（950–974） | `core/game/reward-rules.ts` |
+| `REWARDS`、`STAR_KEYS`、`starCount`（950–974） | `core/game/reward-rules.ts`（`totalStars` 不搬，星星分歌顯示） |
 | `earn`、`#cele`（960–973） | `core/rewards.ts`＋`shared/celebration.ts` |
-| `buildSave`、`sameName`、`cleanSave`、`len`（978–992） | `core/game/save-data.ts` |
-| `MSG`、`NET_ERR`、`postJSON`（993–1004） | `core/cloud-save.ts`（加 413、500） |
+| `buildSave`、`sameName`、`cleanSave`（978–990） | `core/game/save-data.ts` |
+| `len`（991） | `core/game/text.ts`（＋`nameOk`、`passwordOk`） |
+| `MSG`、`NET_ERR`、`postJSON`（993–1004） | `core/api.ts`（加 413、500） |
 | `openCloud`、`cloudForm.onsubmit`、`askWhich`、`#cloud`、`#ask`（1005–1060） | `features/cloud/cloud-dialog.ts` |
 | `#saveBtn` | `app.html` |
 | `#test`（1065–1084） | `core/game/*.spec.ts` |
@@ -380,6 +398,8 @@ fetch('config.json', { cache: 'no-store' })
 
 > `PlaySession` 是唯一多人會碰的檔案：第 0 步定好簽名，之後每人只填自己的方法。
 
+**實際進度（2026-11-01，`feature/angular-scaffold`）**：已完成 `ng new`、models、`storage`、`app-config`＋`main.ts`＋`config.json`、路由＋guard＋佔位頁面、`styles.css` 共用 CSS（含 §3 第一列對齊）、`core/game/*` 全部純函式＋測試、`KidsStore`、`Rewards`、`Api`、`SongCatalog`、`translations`、`SpeechRecognizer`（只有介面＋iOS 註解）、`public/songs/*.json`。B 的 `lyrics.ts`／`translation.ts` 取消。**還沒做**：`PlaySession`、`YoutubePlayer`、`Pronunciation`、`SpeechRecognizer` 實作、CDN 動態 import 驗證、所有畫面元件（`shared/*`、`cloud-dialog`、`play/*` 子元件）。
+
 ---
 
 ## 11. 風險與待決定事項
@@ -392,14 +412,11 @@ fetch('config.json', { cache: 'no-store' })
 5. **localStorage 換網域會「看起來」掉進度**（§7）。
 6. **SPA 深層連結**：靜態主機沒設回退到 `index.html`，重新整理 `/kids/1` 會 404。
 7. **YouTube 自行包裝**：約 40 行，不裝 `@angular/youtube-player`；包裝出問題再改用它。
-8. **外部免費 API** 沒有 SLA，靠快取＋重試，跟舊版一樣。
+8. **外部免費 API**（字典發音、YouTube）沒有 SLA，靠快取＋備援，跟舊版一樣。歌詞＋翻譯已改走自家後端。
 
 ### 需要 PO 決定
-1. **網域**：沿用舊版網域（進度自動保留），還是換網域請家長用雲端存檔搬？
-2. **填填看字表**：維持規則推導（預設），還是每首歌手動列三個難度的字？
-3. **多首歌後的獎勵顯示**：⭐ 跨歌加總、貼紙可重複（舊版行為），要不要改？
-4. **名字長度**：本機名字上限 10 字、雲端名字 1–20 字（舊版就不一致），要不要統一？
-5. **舊版下線時間**：`legacy/` 保留多久？
+1. ~~網域~~、~~填填看字表~~、~~獎勵顯示~~、~~名字長度~~：已決定，見 §0。
+2. **舊版下線時間**：`legacy/` 保留多久？
 
 ---
 
@@ -412,6 +429,6 @@ fetch('config.json', { cache: 'no-store' })
 | 環境變數 | `ALLOWED_ORIGINS=<前端網址>` | `API_URL=<後端網址>` |
 | 健康檢查 | `/api/health` | `/`（`index.html`） |
 | 建置 | — | `npm ci && npx ng build` |
-| 啟動 | 後端自訂 | `test -n "$API_URL"` 失敗就退出 → 寫入 `dist/frontend/browser/config.json` → 靜態伺服器（DevOps 選） |
+| 啟動 | 後端自訂 | `test -n "$API_URL"` 失敗就退出 → 寫入 `dist/frontend/browser/config.json`（`{"apiBaseUrl":"$API_URL"}`）→ 靜態伺服器（DevOps 選） |
 
 前端靜態伺服器需求：未知路徑回 `index.html`（SPA 回退）；`config.json` 與 `index.html` 設 `Cache-Control: no-cache`；其餘帶 hash 的檔案可長期快取；必須 HTTPS（麥克風需要）。
