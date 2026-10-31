@@ -47,7 +47,7 @@ def test_bad_requests():
     bad = [
         {"name": "", "password": "1234", "data": DATA},
         {"name": "   ", "password": "1234", "data": DATA},
-        {"name": "字" * 21, "password": "1234", "data": DATA},
+        {"name": "字" * 11, "password": "1234", "data": DATA},
         {"name": 123, "password": "1234", "data": DATA},
         {"name": "a", "password": "123", "data": DATA},
         {"name": "a", "password": "x" * 65, "data": DATA},
@@ -61,7 +61,7 @@ def test_bad_requests():
         assert st == 400 and r["error"] == "bad_request" and r["ok"] is False and "detail" in r, b
     assert post("/api/load", [1])[0] == 400
     assert post("/api/save", raw=b"{not json")[0] == 400
-    assert post("/api/save", {"name": "字" * 20, "password": "1234", "data": DATA})[0] == 200
+    assert post("/api/save", {"name": "字" * 10, "password": "1234", "data": DATA})[0] == 200
     assert post("/api/save", raw=b"x" * (256 * 1024 + 1)) == (413, {"ok": False, "error": "bad_request", "detail": "body too large"})
 
 
@@ -83,3 +83,83 @@ def test_cors():
     assert ok.status_code == 200 and ok.headers["access-control-allow-origin"] == "http://localhost:4200"
     bad = client.options("/api/save", headers={"Origin": "https://evil.example", **pre})
     assert "access-control-allow-origin" not in bad.headers
+
+
+def make_content_db(songs, schema_ok=True):
+    """用假資料產生 content.db 的位元組（不放真的歌詞）。"""
+    path = os.path.join(tempfile.mkdtemp(), "c.db")
+    db = sqlite3.connect(path)
+    if schema_ok:
+        db.execute("CREATE TABLE songs (song_id TEXT PRIMARY KEY, lrc TEXT NOT NULL, updated_at TEXT NOT NULL)")
+    else:
+        db.execute("CREATE TABLE songs (song_id TEXT PRIMARY KEY, lyrics TEXT)")
+    db.execute("CREATE TABLE translations (song_id TEXT NOT NULL, line TEXT NOT NULL, zh TEXT NOT NULL, PRIMARY KEY (song_id, line))")
+    for sid, line in songs.items():
+        if schema_ok:
+            db.execute("INSERT INTO songs VALUES (?, ?, ?)", (sid, f"[00:01.00] {line}", "2026-11-01T00:00:00+00:00"))
+        db.execute("INSERT INTO translations VALUES (?, ?, ?)", (sid, line, "哈囉世界"))
+    db.commit()
+    db.close()
+    with open(path, "rb") as f:
+        return f.read()
+
+
+def admin(raw, token="secret", ip="7.7.7.7"):
+    h = {"X-Forwarded-For": ip, "Content-Type": "application/octet-stream"}
+    if token is not None:
+        h["Authorization"] = "Bearer " + token
+    r = client.post("/api/admin/content", content=raw, headers=h)
+    return r.status_code, r.json()
+
+
+def test_name_length():
+    assert post("/api/save", {"name": " " + "a" * 10 + " ", "password": "1234", "data": DATA})[0] == 200
+    assert post("/api/save", {"name": "a" * 11, "password": "1234", "data": DATA})[0] == 400
+    assert post("/api/load", {"name": "a" * 11, "password": "1234"})[0] == 400
+
+
+def test_content_and_admin(monkeypatch):
+    # content.db 還不存在 → 404；格式不符 → 400
+    assert client.get("/api/songs/hello/content").json() == {"ok": False, "error": "not_found"}
+    for bad in ("Hello", "a_b", "a" * 41):
+        assert client.get(f"/api/songs/{bad}/content").status_code == 400, bad
+    good = make_content_db({"hello": "hello world"})
+    # 沒設定 ADMIN_TOKEN → 503
+    monkeypatch.setattr(main, "ADMIN_TOKEN", "")
+    assert admin(good) == (503, {"ok": False, "error": "admin_disabled"})
+    monkeypatch.setattr(main, "ADMIN_TOKEN", "secret")
+    assert admin(good, token=None) == (401, {"ok": False, "error": "unauthorized"})
+    assert admin(good, token="nope") == (401, {"ok": False, "error": "unauthorized"})
+    # 壞檔、結構不對、超過 256KB 但未超過 20MB 的非 SQLite 檔 → 400（不受一般 API 的 256KB 限制）
+    for raw in (b"not sqlite", good[:200], make_content_db({"x": "y"}, schema_ok=False), b"x" * (300 * 1024)):
+        assert admin(raw) == (400, {"ok": False, "error": "bad_content"})
+    # 超過 20MB → 413
+    assert admin(b"x" * (20 * 1024 * 1024 + 1))[0] == 413
+    # 先有一筆存檔，確認 admin 上傳不會動到 game.db
+    assert post("/api/save", {"name": "keep", "password": "1234", "data": DATA}, ip="8.8.8.8")[0] == 200
+    assert admin(good) == (200, {"ok": True, "songs": 1})
+    r = client.get("/api/songs/hello/content")
+    assert r.status_code == 200 and r.headers["cache-control"] == "public, max-age=300"
+    assert r.json() == {"ok": True, "songId": "hello", "lrc": "[00:01.00] hello world",
+                        "translations": {"hello world": "哈囉世界"}, "updatedAt": "2026-11-01T00:00:00+00:00"}
+    assert client.get("/api/songs/nope/content").status_code == 404
+    # 替換後立刻讀到新內容
+    assert admin(make_content_db({"hello": "hi there", "try-it": "go go"})) == (200, {"ok": True, "songs": 2})
+    assert client.get("/api/songs/hello/content").json()["lrc"] == "[00:01.00] hi there"
+    assert client.get("/api/songs/try-it/content").status_code == 200
+    assert post("/api/load", {"name": "keep", "password": "1234"}, ip="8.8.8.8") == (200, {"ok": True, "data": DATA})
+    assert not [f for f in os.listdir(TMP) if f.endswith(".upload")]  # 暫存檔有清掉
+
+
+def test_admin_lockout(monkeypatch):
+    monkeypatch.setattr(main, "ADMIN_TOKEN", "secret")
+    for _ in range(5):
+        assert admin(b"x", token="bad", ip="6.6.6.6")[0] == 401
+    assert admin(make_content_db({"a": "b"}), ip="6.6.6.6") == (429, {"ok": False, "error": "too_many_attempts"})
+
+
+def test_cors_no_authorization():
+    pre = {"Origin": "http://localhost:4200", "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "authorization"}
+    assert client.options("/api/admin/content", headers=pre).status_code == 400
+    r = client.get("/api/songs/x/content", headers={"Origin": "http://localhost:4200"})
+    assert r.headers["access-control-allow-origin"] == "http://localhost:4200"

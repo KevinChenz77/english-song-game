@@ -5,23 +5,30 @@ import os
 import secrets
 import sqlite3
 import threading
+import tempfile
 import time
 from datetime import datetime, timezone
 from hashlib import scrypt  # 需 OpenSSL 版 Python；macOS 內建 LibreSSL 版沒有，啟動就會報錯
 from typing import Annotated
+from urllib.parse import quote
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Path, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, StringConstraints
+from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.environ.get("DATA_DIR", os.path.join(BASE_DIR, "data"))
 ALLOWED_ORIGINS = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "http://localhost:4200").split(",") if o.strip()]
+ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "")  # 空字串 = 停用 /api/admin/content
+CONTENT_DB = os.path.join(DATA_DIR, "content.db")  # 歌詞與翻譯，唯讀；由 admin 上傳整檔替換
 
 MAX_BODY = 256 * 1024
+ADMIN_MAX_BODY = 20 * 1024 * 1024  # 只給 /api/admin/content
+ADMIN_PATH = "/api/admin/content"
 FAIL_LIMIT = 5
 FAIL_WINDOW = 600  # 10 分鐘內
 LOCK_SECONDS = 600  # 鎖 10 分鐘
@@ -42,7 +49,7 @@ with DB:
     )
 
 # 請求格式（/docs 會依此產生文件）
-Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=20)]
+Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=10)]
 Password = Annotated[str, StringConstraints(min_length=4, max_length=64)]
 
 
@@ -96,7 +103,7 @@ async def limit_body(request: Request, call_next):
             length = int(request.headers.get("content-length", ""))
         except ValueError:
             return err(400, "bad_request", "missing Content-Length")
-        if length > MAX_BODY:
+        if length > (ADMIN_MAX_BODY if request.url.path == ADMIN_PATH else MAX_BODY):
             return err(413, "bad_request", "body too large")
     return await call_next(request)
 
@@ -106,7 +113,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type"],  # 不含 Authorization：admin 端點只從命令列呼叫
 )
 
 
@@ -185,3 +192,74 @@ def load(body: LoadRequest, request: Request):
 @app.get("/api/health")
 def health():
     return {"ok": True}
+
+
+def open_content():
+    # 唯讀、每次請求開新連線：上傳替換檔案後下一個請求就讀到新內容
+    return sqlite3.connect(f"file:{quote(CONTENT_DB)}?mode=ro", uri=True)
+
+
+@app.get("/api/songs/{song_id}/content")
+def song_content(song_id: Annotated[str, Path(pattern=r"^[a-z0-9-]{1,40}$")]):
+    if not os.path.exists(CONTENT_DB):
+        return err(404, "not_found")
+    db = open_content()
+    try:
+        row = db.execute("SELECT lrc, updated_at FROM songs WHERE song_id = ?", (song_id,)).fetchone()
+        if row is None:
+            return err(404, "not_found")
+        tr = dict(db.execute("SELECT line, zh FROM translations WHERE song_id = ?", (song_id,)))
+    finally:
+        db.close()
+    body = {"ok": True, "songId": song_id, "lrc": row[0], "translations": tr, "updatedAt": row[1]}
+    return JSONResponse(body, headers={"Cache-Control": "public, max-age=300"})
+
+
+CONTENT_SCHEMA = {"songs": {"song_id", "lrc", "updated_at"}, "translations": {"song_id", "line", "zh"}}
+
+
+def replace_content(raw):
+    """驗證上傳的 SQLite 檔，合格就原子化替換 content.db，回傳歌曲數；不合格回 None。不碰 game.db。"""
+    if not raw.startswith(b"SQLite format 3\x00"):
+        return None
+    fd, tmp = tempfile.mkstemp(dir=DATA_DIR, suffix=".upload")  # 同一資料夾，os.replace 才是原子操作
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(raw)
+        db = sqlite3.connect(f"file:{quote(tmp)}?mode=ro", uri=True)
+        try:
+            for table, cols in CONTENT_SCHEMA.items():
+                if not cols <= {r[1] for r in db.execute(f"PRAGMA table_info({table})")}:
+                    return None
+            if db.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+                return None
+            count = db.execute("SELECT COUNT(*) FROM songs").fetchone()[0]
+        except sqlite3.DatabaseError:
+            return None
+        finally:
+            db.close()
+        os.replace(tmp, CONTENT_DB)
+        return count
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+
+
+@app.post(ADMIN_PATH)
+async def upload_content(request: Request):
+    if not ADMIN_TOKEN:
+        return err(503, "admin_disabled")
+    rate_keys = ("ip:" + client_ip(request),)
+    given = request.headers.get("authorization", "")
+    with LOCK:
+        now = time.time()
+        if is_locked(rate_keys, now):
+            return err(429, "too_many_attempts")
+        if not hmac.compare_digest(given.encode(), ("Bearer " + ADMIN_TOKEN).encode()):
+            record_fail(rate_keys, now)
+            return err(401, "unauthorized")
+    raw = await request.body()  # 驗證通過才讀內容
+    count = await run_in_threadpool(replace_content, raw)
+    if count is None:
+        return err(400, "bad_content")
+    return {"ok": True, "songs": count}
