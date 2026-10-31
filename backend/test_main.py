@@ -19,7 +19,7 @@ def post(path, body=None, ip="1.1.1.1", raw=None):
     r = client.post(
         path,
         content=raw if raw is not None else json.dumps(body).encode(),
-        headers={"X-Forwarded-For": ip + ", 10.0.0.1", "Content-Type": "application/json"},
+        headers={"X-Forwarded-For": "10.0.0.1, " + ip, "Content-Type": "application/json"},
     )
     return r.status_code, r.json()
 
@@ -163,3 +163,16 @@ def test_cors_no_authorization():
     assert client.options("/api/admin/content", headers=pre).status_code == 400
     r = client.get("/api/songs/x/content", headers={"Origin": "http://localhost:4200"})
     assert r.headers["access-control-allow-origin"] == "http://localhost:4200"
+
+
+def test_xff_spoof_does_not_bypass_lock(monkeypatch):
+    monkeypatch.setattr(main, "ADMIN_TOKEN", "secret")
+    for i in range(5):
+        assert admin(b"x", token="bad", ip=f"{i}.0.0.9, 5.5.5.5")[0] == 401
+    assert admin(b"x", token="secret", ip="1.2.3.4, 5.5.5.5")[0] == 429
+
+
+def test_transfer_encoding_rejected():
+    for path in ("/api/save", "/api/admin/content"):
+        r = client.post(path, content=b"{}", headers={"Transfer-Encoding": "chunked", "Content-Type": "application/json"})
+        assert r.status_code == 400 and r.json()["detail"] == "Transfer-Encoding not allowed", path

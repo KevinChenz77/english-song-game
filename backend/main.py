@@ -23,7 +23,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.environ.get("DATA_DIR", os.path.join(BASE_DIR, "data"))
 ALLOWED_ORIGINS = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "http://localhost:4200").split(",") if o.strip()]
-ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "")  # 空字串 = 停用 /api/admin/content
+# 空字串 = 停用 /api/admin/content；建議用 python3 -c "import secrets; print(secrets.token_urlsafe(32))" 產生
+ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "")
 CONTENT_DB = os.path.join(DATA_DIR, "content.db")  # 歌詞與翻譯，唯讀；由 admin 上傳整檔替換
 
 MAX_BODY = 256 * 1024
@@ -99,6 +100,8 @@ async def on_server_error(request, exc):
 async def limit_body(request: Request, call_next):
     # 先看 Content-Length，超過就不讀內容直接拒絕；沒有 Content-Length（例如 chunked）也拒絕，避免繞過上限
     if request.method == "POST":
+        if "transfer-encoding" in request.headers:  # 和 Content-Length 並用可能繞過上限，一律拒絕
+            return err(400, "bad_request", "Transfer-Encoding not allowed")
         try:
             length = int(request.headers.get("content-length", ""))
         except ValueError:
@@ -139,8 +142,10 @@ def record_fail(keys, now):
 
 
 def client_ip(request):
+    # 假設前面只有一層受信任代理（Railway）：它把真實 IP 附加在最後，前面的值客戶端可偽造
+    # 若多加一層代理（例如 CDN），要改取倒數第 N 個
     xff = request.headers.get("x-forwarded-for", "")
-    return xff.split(",")[0].strip() or (request.client.host if request.client else "")
+    return xff.split(",")[-1].strip() or (request.client.host if request.client else "")
 
 
 def handle_api(is_load, name, password, data, ip):
