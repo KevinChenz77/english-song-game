@@ -1,0 +1,174 @@
+/* 共用樣式（搬自 legacy <style>）。畫面專屬的樣式放各元件 .css。 */
+:root {
+  --bg: #eaf6ff;
+  --card: #fff;
+  --ink: #16324f;
+  --muted: #6b8299;
+  --accent: #2e8bdc;
+  --accent2: #9fd4ff;
+  --good: #2fb36d;
+  --bad: #e5534b;
+  --hl: #ffcf33;
+  --top-row: 56px; /* 每個畫面第一列（.bar）與右上角 💾 的共同高度 */
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, 'PingFang TC', 'Noto Sans TC', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+}
+button,
+select,
+input {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+  border: 0;
+  border-radius: 14px;
+  padding: 10px 16px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 18px;
+  min-height: 48px;
+}
+button.ghost {
+  background: #fff;
+  color: var(--accent);
+  border: 2px solid var(--accent2);
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+h1 {
+  font-size: 28px;
+  margin: 8px 0 16px;
+}
+
+/* 每個畫面的第一列：和 💾 同高、垂直置中；右邊留位置給 💾 */
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  min-height: var(--top-row);
+  margin-bottom: 12px;
+  padding-right: 110px;
+}
+/* 換行時每一行也是 --top-row 高，第一行仍和 💾 對齊：
+   直接放的按鈕（48px）上下各補 4px；其他子元素（h1、分頁、星星）撐到 --top-row 並垂直置中 */
+.bar > button {
+  margin-block: calc((var(--top-row) - 48px) / 2);
+}
+.bar > :not(button) {
+  min-height: var(--top-row);
+  display: flex;
+  align-items: center;
+}
+.bar h1 {
+  margin: 0;
+}
+.bar button {
+  font-size: 16px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+.card {
+  position: relative;
+  background: var(--card);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px #0001;
+  min-height: 150px;
+  justify-content: center;
+}
+.card .big {
+  font-size: 52px;
+  line-height: 1;
+}
+/* 最難完成：2px 金色流動外框（轉動的錐形漸層） */
+@property --spin {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+.card.gold {
+  border: 2px solid transparent;
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    conic-gradient(from var(--spin), #b8860b, #ffd700, #fff8dc, #ffd700, #b8860b, #daa520, #b8860b) border-box;
+  animation: goldspin 3s linear infinite;
+}
+@keyframes goldspin {
+  to {
+    --spin: 360deg;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card.gold {
+    animation: none;
+  }
+}
+@keyframes shake {
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
+}
+@keyframes pulse {
+  50% {
+    transform: scale(1.08);
+  }
+}
+.note {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+
+dialog {
+  border: 0;
+  border-radius: 20px;
+  padding: 20px;
+  width: min(420px, calc(100% - 32px));
+  background: var(--card);
+  color: var(--ink);
+}
+dialog::backdrop {
+  background: #16324fcc;
+}
+dialog h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+}
+dialog label {
+  display: block;
+  margin: 10px 0;
+}
+dialog input {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  font-size: 20px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 2px solid var(--accent2);
+}
+[hidden] {
+  display: none !important;
+}

@@ -1,0 +1,19 @@
+.shell {
+  position: relative;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* 💾 和每個畫面第一列（.bar）用同一個高度的盒子、各自垂直置中，所以上下對齊 */
+.save {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  height: var(--top-row);
+  display: flex;
+  align-items: center;
+}
+.save button {
+  font-size: 16px;
+}
