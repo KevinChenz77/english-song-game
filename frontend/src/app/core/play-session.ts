@@ -199,8 +199,13 @@ export class PlaySession {
     if (this.mode() === 'listen' && this.player.playing()) this.player.pause();
     this.pron.say(w);
     this._popWord.set(w);
+    this.holdPop(false);
+  }
+
+  /** 手指／滑鼠／鍵盤焦點在小視窗上時 hold=true：不自動關；離開後重新算 6 秒（WCAG 2.2.1）。 */
+  holdPop(hold: boolean): void {
     clearTimeout(this.popTimer);
-    this.popTimer = setTimeout(() => this._popWord.set(null), 3000);
+    if (!hold) this.popTimer = setTimeout(() => this._popWord.set(null), 6000);
   }
 
   closePop(): void {

@@ -167,7 +167,7 @@ describe('PlaySession', () => {
     expect(s.active()).toBeNull();
   });
 
-  it('tapWord：norm 後發音、開小視窗；聽聽看播放中會先暫停；3 秒自動關', () => {
+  it('tapWord：norm 後發音、開小視窗；聽聽看播放中會先暫停；6 秒自動關', () => {
     vi.useFakeTimers();
     const { s, calls, said } = setup();
     s.open(1, song, lines, {});
@@ -178,7 +178,26 @@ describe('PlaySession', () => {
     expect(calls).toEqual(['pause']);
     s.tapWord('!!!');
     expect(said).toEqual(['kite']);
-    vi.advanceTimersByTime(3000);
+    vi.advanceTimersByTime(5999);
+    expect(s.popWord()).toBe('kite');
+    vi.advanceTimersByTime(1);
+    expect(s.popWord()).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it('holdPop：碰著小視窗就不自動關，離開後再等 6 秒', () => {
+    vi.useFakeTimers();
+    const { s } = setup();
+    s.open(1, song, lines, {});
+    s.tapWord('kite');
+    vi.advanceTimersByTime(5000);
+    s.holdPop(true);
+    vi.advanceTimersByTime(60000);
+    expect(s.popWord()).toBe('kite');
+    s.holdPop(false);
+    vi.advanceTimersByTime(5999);
+    expect(s.popWord()).toBe('kite');
+    vi.advanceTimersByTime(1);
     expect(s.popWord()).toBeNull();
     vi.useRealTimers();
   });
