@@ -1,7 +1,7 @@
 # 多語言設計（日文起步，可擴充到任何語言）
 
 > 狀態：設計稿（2026-11-02，前端架構師）。只有文件，還沒寫程式。API 變更由 TPM 定案（見 §4.3）。
-> 目標：加一個語言＝**加一筆語言設定＋歌曲 json**；歌曲只宣告 `lang`。沒有 `lang` 的歌＝`'en'`，英文歌的行為、資料、測試**完全不變**。
+> 目標：加一個語言＝**加一筆語言設定＋歌曲 json**；歌曲只宣告 `lang`。沒有 `lang` 的歌＝`'en'`，英文歌的行為、資料、測試**完全不變**（唯一例外：卡拉 OK 亮字改得更準，PO 已核准，見 §5.1）。
 > 日文原型 3 首：Butter-Fly（LRCLIB 13072731，58 句，漢字＋假名＋少量英文，約 165 BPM）、「あいうえーお！のうた」（`QrKpAHk7u8k`，121 秒）、「ひらがなのうた」（`8IpHIUxhdaI`，113 秒）。兩首五十音歌 **LRCLIB 沒有**，要手動對時間；**都沒有伴奏影片**。
 > 第一期：聽聽看＋填填看。第二期：唱唱看。
 
@@ -20,6 +20,8 @@
 | D7 | 日文發音只用 `speechSynthesis`（ja-JP 聲音），唸**讀音（平假名）**不唸漢字 | Free Dictionary 只有英文；TTS 單獨唸一個漢字詞常唸錯 |
 | D8 | 唱唱看（第二期）：語言決定 Whisper 模型；英文維持 `whisper-tiny.en`，日文用多語模型（先實測 tiny／base）；日文評分以**字**為單位 | 見 §6 |
 | D9 | 沒有 LRCLIB 的歌：本機 `data/lrc/<id>.lrc`（`data/` 已在 .gitignore），歌曲 json 標 `"localLrc": true`；附一個敲拍子對時間的小頁面 `backend/tools/lrc-tap.html` | 兩首五十音歌只能手動對時間；歌詞依然不進 repo |
+| D11 | 卡拉 OK 亮字（所有語言）：有逐字時間（Enhanced LRC）就用真的時間；沒有就把一句的時間依 token 的**音節／音拍權重**分配，句尾留一小段空白（§5.1） | PO 核准 A＋B；取代每字固定 0.5 秒 |
+| D12 | `lrc-tap.html` 有「逐字模式」：0.5×／0.75× 慢速播放、每個 token 敲一下，輸出 Enhanced LRC；任何歌（包括已上線的英文歌）都可以用本機 `data/lrc/<id>.lrc` **覆蓋** LRCLIB | 一個工具同時解決手動對時間、逐字時間、修正句子停點 |
 | D10 | 沒有逐 token 的語言：日文歌裡的英文字當日文歌的 token（ja-JP 聲音唸、查 `dict.ja.json`） | 那就是歌裡唱的方式；混語言會讓每個 token 都要判斷語言 |
 
 ---
@@ -49,7 +51,7 @@
 | `core/play-session.ts:306` | 唱唱看「要多練的字」用 en `norm`＋`STOP` | `lang.norm`／`lang.stop` |
 | `core/play-session.ts:364-365` | `scoreLine`，過關 0.7 | `lang.asr.unit` 選評分；門檻 `lang.asr.pass`（en 0.7） |
 | `features/play/lyrics-panel.ts:12,36-45` | `split(/\s+/)`、`norm`、`STOP`、`lookup` | `l.tokens`＋`lang` |
-| `features/play/lyrics-panel.ts:57-65` | 卡拉 OK 每個空白分隔的字 0.5 秒 | `lang.karaoke`：每個 token 的「長度單位」×秒數（en＝1 字×0.5 秒，和現在一樣） |
+| `features/play/lyrics-panel.ts:57-65` | 卡拉 OK 每個空白分隔的字 0.5 秒 | 純函式 `karaokeTimes(line, lang)`（`core/game/karaoke.ts`）回傳每個 token 的開始時間：真的逐字時間或權重估計（§5.1）；`sung` 只比較 `time` 和這個陣列 |
 | `features/play/lyrics-panel.html:17-31` | 字與字之間插 `' '` | `lang.spaced`；ja 不插空白，改 CSS 小間距（§5） |
 | `features/play/lyrics-panel.html:54-57` | Free Dictionary 授權說明 | 只有 `lang.dictAudio` 顯示 |
 | `features/play/quiz-panel.ts:77` / `.html:9-17` | `split(/\s+/)`、`' '` | `l.tokens`、`lang.spaced` |
@@ -60,12 +62,14 @@
 | `models/song.model.ts:11-23` | 沒有語言；`lrclibId` 必填 | `lang?`、`lrclibId?`、`localLrc?`、`readings?`（§4.1） |
 | `index.html:2`、`styles.css:56` | `lang="zh-Hant"`＋中文字型 | 歌詞容器加 `[attr.lang]="lang.code"`＋`:lang(ja)` 字型（§5） |
 | `backend/tools/build_content.py:54` | MyMemory `en|zh-TW` | `f"{lang}|zh-TW"` |
-| `backend/tools/build_content.py:70` | 只會從 LRCLIB 抓 | `localLrc` → 讀 `data/lrc/<id>.lrc` |
+| `backend/tools/build_content.py:70` | 只會從 LRCLIB 抓 | 有 `data/lrc/<id>.lrc` 就用它（覆蓋 LRCLIB），否則 LRCLIB；`localLrc` 的歌沒有檔案就報錯 |
+| `backend/tools/build_content.py:22,43-50` | 句子文字＝時間戳後的整段 | 先去掉 `<mm:ss.xx>` 逐字時間再當 key（和前端 `parseLrc` 同一條規則） |
+| `core/game/lrc.ts:7-8` | 不認得 Enhanced LRC | `<mm:ss.xx>` 從 `text` 拿掉，存成 `stamps`（§4.1） |
 | `backend/tools/build_content.py:23-26` | 沒有 tokens 表 | 加 `tokens` 表（§4.2） |
 | `backend/main.py:207-219` | 回 `{lrc, translations}` | 多回選填的 `tokens`（§4.3） |
 | `core/songs-data.spec.ts:2,28-35,53-56,72-86` | `dict.json`、en `norm`、三個難度、`lrclibId` | 依 `lang` 檢查（§7） |
 
-不用改：`lrc.ts`、`translations.ts`（以整句原文當 key，日文一樣可用）、`rewards.ts`、`kid.model.ts`、存檔格式、`youtube-*`、`backing-track.ts`（沒有 `karaoke` 已經會安靜跳過）。
+不用改：`translations.ts`（以整句原文當 key，日文一樣可用）、`rewards.ts`、`kid.model.ts`、存檔格式、`youtube-*`、`backing-track.ts`（沒有 `karaoke` 已經會安靜跳過）。
 
 ---
 
@@ -87,7 +91,7 @@ export interface Lang {
   reading: boolean;             // 有讀音輔助（ruby）可切換
   dictAudio: boolean;           // Free Dictionary 真人錄音
   tts: { lang: string; good: RegExp; rate: number };
-  karaoke: { units(t: Token): number; sec: number }; // 卡拉 OK：每個 token 幾個單位 × 每單位秒數
+  units(t: Token): number;      // 卡拉 OK 權重：en 音節數、ja 音拍數（§5.1）
   asr: { model: string; language?: string; mb: number; unit: 'word' | 'char'; pass: number; junk: RegExp };
 }
 
@@ -104,7 +108,7 @@ export const langOf = (s: Pick<Song, 'lang'>) => LANGS[s.lang ?? 'en'];
 | `levels` | normal／hard／expert | normal／hard |
 | `reading` / `dictAudio` | false / true | true / false |
 | `tts` | `en-US`、現有 `GOOD_VOICES`、0.8 | `ja-JP`、`/kyoko|o-ren|otoya|hattori|premium|enhanced|nanami|google 日本語/i`、0.8 |
-| `karaoke` | `units = 1`、`sec = 0.5`（＝現在） | `units = (r ?? s) 的字數`（約等於音拍）、`sec = 0.18`（165 BPM 八分音符）——ponytail：粗估，快歌慢歌各差一點，句長本來就封頂；要準再做逐字時間 |
+| `units` | 母音群數（`/[aeiouy]+/g` 的個數，字尾單獨的 `e` 不算，最少 1）——ponytail：粗估音節，夠用來分配時間 | 讀音（`r ?? s`）的假名數，不算小寫的ゃゅょぁぃぅぇぉ（＝音拍；っ、ー、ん算一拍）；英文 token 用 en 的規則 |
 | `asr` | `whisper-tiny.en`、41MB、word、0.7、現有幻覺字串 | 多語 Whisper（§6.1）、`language: 'japanese'`、char、0.6（要實測調）、日文幻覺字串 |
 
 不放進設定的（YAGNI）：顯示方向（沒有 RTL 需求）、每語言 UI 文案（介面一律中文）、每語言題數（先共用，見 Q3）。
@@ -119,10 +123,12 @@ export const langOf = (s: Pick<Song, 'lang'>) => LANGS[s.lang ?? 'en'];
 
 ```ts
 lang?: string;      // 沒寫＝'en'（現有 3 首不用改）
-lrclibId?: number;  // 和 localLrc 二選一
-localLrc?: true;    // 歌詞在內容工程師本機 data/lrc/<id>.lrc（手動對時間）
+lrclibId?: number;  // 歌詞來源；本機有 data/lrc/<id>.lrc 時會被它覆蓋（重新對時間）
+localLrc?: true;    // LRCLIB 沒有這首：歌詞只在內容工程師本機 data/lrc/<id>.lrc（手動對時間）
 readings?: Record<string, string>; // 讀音修正：{ 詞: 平假名 }，build_content 用，修 MeCab 唸錯的詞（單詞，不是歌詞句子）
 ```
+
+`LyricLine` 加 `stamps?: { at: number; t: number }[]`（`parseLrc` 從 Enhanced LRC 讀出：`at`＝去掉時間戳後的 `text` 裡的字元位置，`t`＝秒）。存「字元位置」而不是「第幾個字」，所以跟各語言怎麼斷詞無關：日文 tokens 由 fugashi 切、時間由人敲，兩者不必對齊。
 
 `LyricLine` 加 `tokens: Token[]`（前端在 `PlaySession.open()` 填：後端有給用後端的，沒有就 `lang.split(text)`）。放在 `open()` 而不是 `Api.content()`：`content()` 不必等歌曲 json 才知道語言，兩個請求仍可同時發。
 
@@ -155,7 +161,9 @@ CREATE TABLE IF NOT EXISTS tokens (song_id TEXT NOT NULL, line TEXT NOT NULL, js
 LANGS = {"en": {"tokens": None}, "ja": {"tokens": ja_tokens}}  # MyMemory 一律 f"{lang}|zh-TW"
 ```
 
-- 歌詞來源：`localLrc` → 讀 `data/lrc/<id>.lrc`（沒有檔案就明確報錯）；否則 LRCLIB。
+- 歌詞來源：本機有 `data/lrc/<id>.lrc` 就用它（任何歌、任何語言，可含 Enhanced LRC 逐字時間），否則 LRCLIB；`localLrc` 的歌沒有檔案就明確報錯。整段 LRC（含逐字時間）照舊存 `songs.lrc`，**不加欄位**。
+- `lyric_lines()` 先去掉 `<mm:ss.xx>` 再當句子 key，翻譯與 tokens 的 key 才會和前端 `parseLrc` 的 `text` 一致。
+- 印出時多一欄「來源：lrclib／local（N 句有逐字時間）」，方便確認覆蓋有生效。
 - `ja_tokens(line, readings)`：先依空白切（**空白永遠是 token 邊界**，手動對時間的歌可以用空白自己決定怎麼切），每段丟 fugashi；助動詞、接續助詞「て」併進前一個 token（不然「見／たい」切太碎不好點）；讀音取 UniDic 的 `kana` 轉平假名，**只在原文含漢字時才存**；`readings` 覆蓋；羅馬拼音用 cutlet（Hepburn）。
 - fugashi/cutlet 只在有 ja 歌時才 `import`；沒有日文歌的人照舊只要標準函式庫。
 - `--check` 加一個用自編句子（不是歌詞）的斷詞／讀音自我測試。
@@ -171,10 +179,30 @@ LANGS = {"en": {"tokens": None}, "ja": {"tokens": ja_tokens}}  # MyMemory 一律
 | 讀音切換 | ja 歌時在歌詞面板上方一個按鈕：「讀音：羅馬拼音 → 平假名 → 關」，存 localStorage `reading`（新鍵，per 裝置）。平假名模式只標有漢字的 token；羅馬拼音模式每個 token 都標 |
 | 字型 | `styles.css` 加 `:lang(ja) { font-family: system-ui, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic', sans-serif; }`；歌詞、題目、唱唱看、單字小視窗的容器設 `[attr.lang]="lang.code"`。不載網路字型（iPad 內建 Hiragino）。少了 `lang="ja"`，漢字會用繁中字形顯示（例如「直」「骨」寫法不同） |
 | 字間距 | ja `spaced=false`：token 之間不插空白，按鈕 `margin-inline: .12em`，看得出哪裡可以點 |
-| 卡拉 OK | 仍是 `.w.sung` 逐 token 亮，計時改 `lang.karaoke`（§3），ruby 跟著按鈕變色 |
+| 卡拉 OK | 仍是 `.w.sung` 逐 token 亮，時間來自 `karaokeTimes()`（§5.1），ruby 跟著按鈕變色 |
 | 單字小視窗 | ja：大字原文＋讀音（羅馬拼音／平假名照目前切換）＋中文；🔊 唸平假名讀音 |
 | 填填看選項 | 每個選項＝ruby 原文＋中文（小朋友靠中文和羅馬拼音選）；空格 `＿` 依字數 |
 | 選歌卡片 | `lang !== 'en'` 時卡片角落一個小標籤（`lang.name`），不做篩選（歌少） |
+
+### 5.1 卡拉 OK 亮字時間（所有語言，PO 核准 A＋B）
+
+`core/game/karaoke.ts` 的純函式 `karaokeTimes(line, lang): number[]`（每個 token 的開始秒數），`lyrics-panel` 的 `sung` 改成「`time` 已經過了幾個開始時間」。每句只算一次（放進 `rows` computed）。
+
+- **B：有逐字時間**（`line.stamps`）：每個 token 依它在 `text` 裡的字元位置，落在哪兩個 stamp 之間，就在這段時間裡依 A 的權重分配。stamp 剛好在 token 開頭＝直接用那個時間。
+- **A：沒有逐字時間**：可用時間 `span = min(end − t − TAIL, Σunits × MAX_PER_UNIT)`，token k 的開始＝`t + span × (前面 token 的 units 合計 / Σunits)`。`TAIL = 0.3` 秒（句尾留白，下一句前不會全亮太晚）、`MAX_PER_UNIT = 0.45` 秒（句子後面接很長的間奏時不會慢慢拖）。ponytail：兩個常數是調整用的旋鈕，實際聽幾首再調。
+- 英文也走同一個函式：沒有逐字時間時從「每字 0.5 秒」變成依音節分配（PO 核准的行為變更；`lyrics-panel` 的期望值要改，其他英文測試不動）。
+- 句子開始時間重新敲過，也順便讓填填看／唱唱看的停點（`endT`＝下一句開始）更準。
+
+### 5.2 `lrc-tap.html`（本機工具，語言無關）
+
+一個靜態頁（約 120 行，不屬於 Angular app，不存、不送任何東西）：
+
+- 輸入 YouTube videoId，貼上歌詞（一行一句）。行內用**空白**（保留）或 `|`（輸出時拿掉，給日文這種沒有空白的語言用）標出要敲的位置；沒標就只敲句子開頭。
+- **句子模式**：每句開始敲一下（空白鍵或大按鈕），Backspace 退一下。
+- **逐字模式**：`player.setPlaybackRate(0.5 | 0.75)` 慢速播，每個段落開頭敲一下。時間一律讀 `player.getCurrentTime()`——它本來就是**影片時間**，不是牆上時間，所以慢速播放**不用換算**。另有「反應時間修正」欄（預設 −0.1 秒）扣掉人手延遲。
+- 可以先貼一份既有的 LRC（例如 LRCLIB 的），只重敲逐字時間、保留句子開頭。
+- 輸出 Enhanced LRC：`[mm:ss.xx]<mm:ss.xx>段落<mm:ss.xx>段落…`，去掉 `<…>` 和 `|` 後必須**和原句一字不差**（頁面自己檢查，不一致就不輸出），否則翻譯 key 會對不上。
+- 結果貼進 `data/lrc/<id>.lrc`。⚠️ 這個資料夾只在內容工程師電腦上（gitignored）：敲好的時間要自己備份（例如私人雲端硬碟），電腦壞了只能重敲。
 
 ---
 
@@ -212,7 +240,7 @@ LANGS = {"en": {"tokens": None}, "ja": {"tokens": ja_tokens}}  # MyMemory 一律
 `core/songs-data.spec.ts` 改成依語言：
 
 - `lang` 沒寫或在 `LANGS` 裡。
-- `lrclibId`（正整數）和 `localLrc: true` **剛好一個**（CI 沒有 `data/lrc/`，所以不檢查檔案存在；那是 `build_content.py` 的事）。
+- `lrclibId`（正整數）和 `localLrc: true` **剛好一個**（CI 沒有 `data/lrc/`，所以不檢查檔案存在；那是 `build_content.py` 的事）。LRCLIB 的歌被本機檔案覆蓋時 json 不用改。
 - 每個 `dict.<code>.json`：key 已排序、`norm` 過（用該語言的 `norm`）、中文不空。
 - 填填看：只檢查 `lang.levels` 的難度題數；不在 `levels` 的難度必須是空陣列（ja 的 `expert: []`）。每個字用該語言 `norm` 過、在 `dict.<lang>.json`＋`song.dict` 查得到。
 - `readings` 的值只能是平假名。
@@ -223,10 +251,10 @@ LANGS = {"en": {"tokens": None}, "ja": {"tokens": ja_tokens}}  # MyMemory 一律
 - 日文要先 `pip install -r backend/tools/requirements-tools.txt`。
 - **沒有 LRCLIB 的歌**（手動對時間）：
   1. `python3 -m http.server 8002 -d backend/tools`，開 `http://localhost:8002/lrc-tap.html`（YouTube 內嵌需要 http 網址，`file://` 不行）。
-  2. 貼影片 id 和歌詞（一行一句；日文可用空白自己切詞），播放，每句開始時按空白鍵／大按鈕，Backspace 退一句；頁面產生 `[mm:ss.xx]` LRC。
-  3. 存成 `data/lrc/<id>.lrc`（gitignored），json 寫 `"localLrc": true`，照常跑 `build_content.py`、上傳。
+  2. 貼影片 id 和歌詞，先用句子模式敲每句開頭；要逐字亮再用逐字模式（0.5×／0.75×）敲一次（§5.2）。
+  3. 存成 `data/lrc/<id>.lrc`（gitignored，記得備份），json 寫 `"localLrc": true`，照常跑 `build_content.py`、上傳。
   4. 微調：在遊戲家長設定調整體時間差，個別句子直接改 `.lrc`。
-  - 這個頁面只有一個 `<textarea>` 與 YouTube iframe，**不存任何東西、不送出任何東西**（約 80 行，不屬於 Angular app）。
+- **已上線的歌想要逐字亮／修停點**（任何語言）：同一個工具，先貼 LRCLIB 的 LRC，敲完存 `data/lrc/<id>.lrc`，重建上傳。json 不用改。
 - 讀音錯了：在歌曲 json 的 `readings` 加 `{ 詞: 正確平假名 }`，重建 content.db。
 - 沒有伴奏影片就不放 `karaoke`（兩首五十音歌都是）。
 - 上傳仍是整檔替換：db 必須含**所有**語言的所有歌。
@@ -235,18 +263,21 @@ LANGS = {"en": {"tokens": None}, "ja": {"tokens": ja_tokens}}  # MyMemory 一律
 
 ## 8. 分工與時程
 
-**第 0 步（1 人，約 1 天，先做完才分支）**：`core/lang.ts`（en＋ja 兩筆，ja 先填已知值）、`Song`／`LyricLine`／`Token` 型別、`PlaySession.open()` 填 tokens、把 §2 前端所有 `split(/\s+/)`／`norm`／`STOP`／`lookup` 改走 `line.tokens`＋`lang`、`dict.json` 改名 `dict.en.json`、`SongCatalog.dict(lang)`。**驗收：英文行為完全不變，現有測試全過**（只改 import 和呼叫方式，不改期望值）。
+**順序**：PO 加的兩首入門英文歌（Walking In The Forest、Walking in the Jungle）正在用 `dict.json` 加，**先合併進 develop，第 0 步再從那之後開分支**；`dict.json → dict.en.json` 用 `git mv` 放在第 0 步最後一個 commit，改名就會帶著它們的字。第 0 步合併後，加歌一律用 `dict.<lang>.json`。
+
+**第 0 步（1 人，約 2 天，先做完才分支）**：`core/lang.ts`（en＋ja 兩筆，ja 先填已知值）、`Song`／`LyricLine`／`Token` 型別、`PlaySession.open()` 填 tokens、把 §2 前端所有 `split(/\s+/)`／`norm`／`STOP`／`lookup` 改走 `line.tokens`＋`lang`、`SongCatalog.dict(lang)`、**`parseLrc` 讀 Enhanced LRC（`stamps`）＋`karaoke.ts`（A＋B）＋測試**、`dict.json` 改名 `dict.en.json`。**驗收：除了卡拉 OK 亮字時間（§5.1），英文行為不變，其他現有測試全過**（只改 import 和呼叫方式，不改期望值）。
 
 **第一期（聽聽看＋填填看），第 0 步之後平行，檔案不重疊**
 
 | 分支 | 範圍（檔案） | 估計 |
 |---|---|---|
-| `feature/ml-pipeline` | `backend/tools/build_content.py`、`backend/tools/requirements-tools.txt`、`backend/main.py`、`backend/test_main.py` | 1.5 天 |
+| `feature/ml-pipeline` | `backend/tools/build_content.py`（含本機 LRC 覆蓋、去掉逐字時間當 key）、`backend/tools/requirements-tools.txt`、`backend/main.py`、`backend/test_main.py` | 1.5～2 天 |
 | `feature/ml-lyrics-ui` | `lyrics-panel.*`、`word-pop.ts`、`styles.css`（字型）、`shared/song-card.ts`（語言標籤） | 1 天 |
 | `feature/ml-quiz-tts` | `quiz-panel.*`、`pronunciation.ts` | 0.5～1 天 |
-| `feature/ml-content` | `public/songs/` 三首 json＋`index.json`＋`dict.ja.json`、`songs-data.spec.ts`、`docs/adding-a-song.md`、`backend/tools/lrc-tap.html`；兩首歌手動對時間 | 1.5 天＋教育顧問題目字表 |
+| `feature/ml-content` | `public/songs/` 三首 json＋`index.json`＋`dict.ja.json`、`songs-data.spec.ts`、`docs/adding-a-song.md`、`backend/tools/lrc-tap.html`（句子＋逐字模式）；兩首歌手動對時間 | 2 天＋教育顧問題目字表 |
+| 內容工程師（持續） | 用逐字模式重敲歌曲（含既有英文歌） | 每首約 1～2 小時，可選，不擋上線 |
 
-第一期合計約 5～6 人天，平行約 3 個工作天（含第 0 步）。
+第一期合計約 7～8 人天（比原估多約 2 天：第 0 步 +1、pipeline +0.5、工具 +0.5），平行約 4 個工作天（含第 0 步）。
 
 **第二期（唱唱看）**：spike tiny/base（1 天）→ `speech-recognizer.ts`（per-lang 模型、language、幻覺字串）＋`scoring.ts`（`scoreChars`＋測試）＋`sing-panel.*`（`lang` 屬性、ruby）＋`play-session.ts`（門檻、評分選擇）約 2 天。合計約 3 人天，單線。
 
@@ -258,7 +289,9 @@ LANGS = {"en": {"tokens": None}, "ja": {"tokens": ja_tokens}}  # MyMemory 一律
 | 日文模型下載 80MB（base） | 第一次進唱唱看等很久、行動網路 | 進度文字照舊；先在 Wi-Fi 下載；之後瀏覽器快取 |
 | LRCLIB 503 | 建 db 卡住 | `get_json` 已重試 8 次；建議預設只抓「db 裡還沒有」的歌，指定 id 才重抓 |
 | 讀音錯（MeCab 選錯讀法、歌詞特殊唸法） | 小朋友學錯 | `readings` 覆蓋；上傳前家長／顧問看一遍羅馬拼音 |
-| 165 BPM 卡拉 OK 與停點 | 亮字和歌聲對不上 | 句長封頂（現有）；`karaoke.sec` 可調；不夠準再做逐字時間（LRCLIB 的 enhanced LRC 多半沒有） |
+| 165 BPM 卡拉 OK 與停點 | 亮字和歌聲對不上 | 權重估計＋句尾留白（§5.1，旋鈕可調）；重要的歌用逐字模式敲真的時間 |
+| 本機 `data/lrc/` 遺失 | 敲好的時間沒了，只能重敲 | 內容工程師自己備份；content.db 本身也有完整 LRC，可從伺服器那份還原 |
+| 逐字時間檔的句子和原句不一致 | 翻譯、tokens 對不上 | `lrc-tap.html` 輸出前檢查；`build_content.py` 照舊用去掉時間戳的句子當 key |
 | 手動對時間不準 | 歌詞跳太早／太晚 | 家長設定時間差＋直接改 `.lrc` |
 | MyMemory 日文→繁中品質 | 翻譯怪 | 家長在本機修改（現有 `tr_<id>`） |
 | 第 0 步改到很多檔 | 和其他進行中的分支衝突 | 第 0 步排在沒有其他前端分支時合併 |
