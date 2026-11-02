@@ -1,13 +1,36 @@
 <div class="bar">
   <h1>🎵 唱歌學英文</h1>
   <button type="button" class="ghost" routerLink="/help">❓ 遊戲說明</button>
-  <button type="button" class="ghost">📥 匯入</button>
+  <button type="button" class="ghost" (click)="cloud.open('load')">📥 匯入</button>
 </div>
 <p>誰要玩呢？</p>
-<ul>
+<div class="grid">
   @for (k of store.kids(); track k.id) {
-    <li><a [routerLink]="['/kids', k.id]">{{ k.avatar }} {{ k.name }}</a></li>
+    <div class="kid">
+      <a class="card" [routerLink]="['/kids', k.id]">
+        <div class="big">{{ k.avatar }}</div>
+        <div>{{ k.name }}</div>
+        <div>⭐ {{ stars(k) }}</div>
+      </a>
+      <button type="button" class="del" [attr.aria-label]="'刪除 ' + k.name" (click)="remove(k)">✕</button>
+    </div>
   }
-</ul>
-<label>名字：<input #name maxlength="10" placeholder="例如：小明" /></label>
-<button type="button" (click)="add(name)">好了！</button>
+  <button type="button" class="card add" (click)="open()">
+    <div class="big">➕</div>
+    <div>新增小朋友</div>
+  </button>
+</div>
+@if (adding()) {
+  <div class="form">
+    <label>名字：<input #name maxlength="10" placeholder="例如：小明" (keydown.enter)="add(name)" /></label>
+    <div class="avs" role="radiogroup" aria-label="頭像">
+      @for (a of avatars; track a) {
+        <button type="button" role="radio" [attr.aria-checked]="a === avatar()" [class.sel]="a === avatar()" (click)="avatar.set(a)">
+          {{ a }}
+        </button>
+      }
+    </div>
+    <button type="button" (click)="add(name)">好了！</button>
+    <button type="button" class="ghost" (click)="adding.set(false)">取消</button>
+  </div>
+}
