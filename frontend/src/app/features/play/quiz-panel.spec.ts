@@ -1,20 +1,20 @@
 import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
 import { QuizPanel } from './quiz-panel';
 import { PlaySession } from '../../core/play-session';
 import { YoutubePlayer } from '../../core/youtube-player';
 import { Rewards } from '../../core/rewards';
-import { SongCatalog } from '../../core/song-catalog';
 import { parseLrc } from '../../core/game/lrc';
+import { tokenize } from '../../core/lang';
 import { Question } from '../../core/game/quiz';
 import { Song } from '../../core/models/song.model';
 
 // 假句子（不放真實歌詞）
-const lines = parseLrc('[00:01] red fox runs\n[00:03] the big blue boat');
+const lines = tokenize(parseLrc('[00:01] red fox runs\n[00:03] the big blue boat'), {});
 const q = (i: number, k: number, w: string, opts: string[]): Question => ({
   i,
   k,
   w,
+  tok: { s: w },
   opts,
   endT: lines[i].end,
   done: false,
@@ -27,10 +27,6 @@ async function setup(level: 'normal' | 'expert' = 'normal') {
     providers: [
       { provide: YoutubePlayer, useValue: player },
       { provide: Rewards, useValue: { earn: vi.fn() } },
-      {
-        provide: SongCatalog,
-        useValue: { dict: { value: signal({ fox: '狐狸', cat: '貓（動物）' }) } },
-      },
     ],
   });
   const s = TestBed.inject(PlaySession);
@@ -50,6 +46,8 @@ async function setup(level: 'normal' | 'expert' = 'normal') {
     q(1, 3, 'boat', ['boat', 'fox', 'cat']),
   ]);
   const f = TestBed.createComponent(QuizPanel);
+  // Play 傳進來的字典＝共用字典疊上 song.dict
+  f.componentRef.setInput('dicts', { en: { fox: '狐狸', cat: '貓（動物）', boat: '船' } });
   await f.whenStable();
   const el: HTMLElement = f.nativeElement;
   const btn = (t: string) =>

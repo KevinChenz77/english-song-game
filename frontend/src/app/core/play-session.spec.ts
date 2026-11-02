@@ -5,7 +5,7 @@ import { YoutubePlayer } from './youtube-player';
 import { Rewards } from './rewards';
 import { SpeechRecognizer } from './speech-recognizer';
 import { Pronunciation } from './pronunciation';
-import { LyricLine, Song } from './models/song.model';
+import { LrcLine, Song } from './models/song.model';
 import { Question } from './game/quiz';
 
 // 自編的句子（不用真的歌詞）。每句 2 秒，從 10 秒開始。
@@ -21,7 +21,7 @@ const TEXTS = [
   'birds sing in the garden',
   'the moon looks very round',
 ];
-const lines: LyricLine[] = TEXTS.map((text, i) => ({ t: 10 + i * 2, end: 12 + i * 2, text }));
+const lines: LrcLine[] = TEXTS.map((text, i) => ({ t: 10 + i * 2, end: 12 + i * 2, text }));
 const song = {
   id: 'demo',
   videos: [
@@ -172,14 +172,14 @@ describe('PlaySession', () => {
     const { s, calls, said } = setup();
     s.open(1, song, lines, {});
     calls.length = 0;
-    s.tapWord('Kite,');
+    s.tapWord({ s: 'Kite,' });
     expect(said).toEqual(['kite']);
-    expect(s.popWord()).toBe('kite');
+    expect(s.popWord()).toEqual({ s: 'kite' });
     expect(calls).toEqual(['pause']);
-    s.tapWord('!!!');
+    s.tapWord({ s: '!!!' });
     expect(said).toEqual(['kite']);
     vi.advanceTimersByTime(5999);
-    expect(s.popWord()).toBe('kite');
+    expect(s.popWord()).toEqual({ s: 'kite' });
     vi.advanceTimersByTime(1);
     expect(s.popWord()).toBeNull();
     vi.useRealTimers();
@@ -189,14 +189,14 @@ describe('PlaySession', () => {
     vi.useFakeTimers();
     const { s } = setup();
     s.open(1, song, lines, {});
-    s.tapWord('kite');
+    s.tapWord({ s: 'kite' });
     vi.advanceTimersByTime(5000);
     s.holdPop(true);
     vi.advanceTimersByTime(60000);
-    expect(s.popWord()).toBe('kite');
+    expect(s.popWord()).toEqual({ s: 'kite' });
     s.holdPop(false);
     vi.advanceTimersByTime(5999);
-    expect(s.popWord()).toBe('kite');
+    expect(s.popWord()).toEqual({ s: 'kite' });
     vi.advanceTimersByTime(1);
     expect(s.popWord()).toBeNull();
     vi.useRealTimers();

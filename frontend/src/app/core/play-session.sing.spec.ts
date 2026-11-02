@@ -4,17 +4,18 @@ import { YoutubePlayer } from './youtube-player';
 import { Rewards } from './rewards';
 import { SpeechRecognizer, isHallucination } from './speech-recognizer';
 import { BackingTrack } from './backing-track';
-import { LyricLine, Song } from './models/song.model';
+import { Song } from './models/song.model';
+import { tokenize } from './lang';
 import { SingPanel } from '../features/play/sing-panel';
 
 // 自編句子（公開 repo 不放真歌詞）
-const lines: LyricLine[] = [
+const lines = tokenize([
   { t: 1, end: 3, text: 'The purple cat jumps high' },
   { t: 3, end: 5, text: 'My robot likes green soup' },
   { t: 5, end: 7, text: 'We paint the moon at night' },
   { t: 7, end: 9, text: 'Tiny boats sail far away' },
   { t: 9, end: 11, text: 'Happy frogs sing loudly today' },
-];
+], {});
 const song = { id: 'demo', karaoke: { id: 'kara1', offset: -1 } } as Song;
 
 describe('PlaySession 唱唱看', () => {

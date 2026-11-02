@@ -17,7 +17,7 @@
         @for (w of r.words; track $index; let k = $index) {
           @if (w.blank) {
             <span class="blank" [class.ok]="r.blankOk" [class.sung]="now && k < sung()">{{
-              w.tok
+              w.t.s
             }}</span>
           } @else {
             <button
@@ -25,8 +25,8 @@
               class="w"
               [class.known]="w.known"
               [class.sung]="now && k < sung()"
-              (click)="session.tapWord(w.tok)"
-            >{{ w.tok }}</button>
+              (click)="session.tapWord(w.t)"
+            >{{ w.t.s }}</button>
           }
           {{ ' ' }}
         }
@@ -42,7 +42,7 @@
       @if (r.chips.length) {
         <div class="vocab">
           @for (c of r.chips; track c.w) {
-            <button type="button" class="chip" (click)="session.tapWord(c.w)">
+            <button type="button" class="chip" (click)="session.tapWord(c.t)">
               <b>{{ c.w }}</b> {{ c.zh }}
             </button>
           }

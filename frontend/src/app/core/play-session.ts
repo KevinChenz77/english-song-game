@@ -2,10 +2,10 @@ import { Service, computed, inject, signal } from '@angular/core';
 import { YoutubePlayer } from './youtube-player';
 import { Rewards } from './rewards';
 import { SpeechRecognizer } from './speech-recognizer';
-import { LyricLine, PlayMode, QuizLevel, Song } from './models/song.model';
+import { LrcLine, LyricLine, PlayMode, QuizLevel, Song, Token } from './models/song.model';
 import { Question, pickQuestions } from './game/quiz';
 import { ScoredWord, scoreLine } from './game/scoring';
-import { STOP, norm } from './game/text';
+import { langOf, tokLang, tokenize } from './lang';
 import { BackingTrack } from './backing-track';
 import { Pronunciation } from './pronunciation';
 import { Sfx } from './sfx';
@@ -84,19 +84,19 @@ export class PlaySession {
     return i;
   });
 
-  /** 點單字的小視窗（norm 過的字；null = 關閉）。3 秒自動關。 */
-  private readonly _popWord = signal<string | null>(null);
+  /** 點單字的小視窗（s 已 norm 過的 token；null = 關閉）。6 秒自動關。 */
+  private readonly _popWord = signal<Token | null>(null);
   readonly popWord = this._popWord.asReadonly();
   private popTimer?: ReturnType<typeof setTimeout>;
   private prevLine = -1; // onTick 上一次的目前句（記 heard 用；拖進度條跳太多不算）
 
-  /** 開新的一局（E）。換了歌：videoIndex 歸 0；offset 讀 off_<videoId> 或預設。mode/quizLevel/singAll 沿用。 */
-  open(kidId: number, song: Song, lines: LyricLine[], translations: Record<string, string>): void {
+  /** 開新的一局（E）。換了歌：videoIndex 歸 0；offset 讀 off_<videoId> 或預設。mode/quizLevel/singAll 沿用。依歌曲語言填 tokens。 */
+  open(kidId: number, song: Song, lines: LrcLine[], translations: Record<string, string>): void {
     this.closePop(); // 上一局留下的單字小視窗不要帶過來
     if (this.song()?.id !== song.id) this.videoIndex.set(0);
     this.kidId.set(kidId);
     this.song.set(song);
-    this.lines.set(lines);
+    this.lines.set(tokenize(lines, song));
     this.translations.set(translations);
     this.parentOpen.set(false); // 新畫面的 <details> 是關的
     this.offset.set(this.savedOffset());
@@ -146,7 +146,7 @@ export class PlaySession {
       song = this.song();
     this.mode.set(m);
     if (m === 'quiz' && song) {
-      const qs = pickQuestions(lines, song.quiz[this.quizLevel()]);
+      const qs = pickQuestions(lines, song.quiz[this.quizLevel()], song);
       this.questions.set(qs);
       this.pron.prefetch(qs.slice(0, 8).map((q) => q.w)); // 先慢慢查好答案的發音
     } else if (m === 'sing') {
@@ -196,12 +196,12 @@ export class PlaySession {
   }
 
   /** 點單字：發音＋小視窗（E）。點擊時同步呼叫（iOS 發音要在手勢裡）。聽聽看播放中會先暫停。 */
-  tapWord(token: string): void {
-    const w = norm(token);
+  tapWord(t: Token): void {
+    const w = tokLang(t, this.song() ?? {}).norm(t.s);
     if (!w) return;
     if (this.mode() === 'listen' && this.player.playing()) this.player.pause();
     this.pron.say(w);
-    this._popWord.set(w);
+    this._popWord.set({ ...t, s: w });
     this.holdPop(false);
   }
 
@@ -295,6 +295,8 @@ export class PlaySession {
       return;
     }
     this.finished.set(true);
+    const song = this.song();
+    const L = langOf(song ?? {}); // ponytail：唱唱看評分還是整句英文規則，日文在第二期改
     const passed = qs.filter((q) => q.passed).length;
     const score = Math.round((passed / qs.length) * 100);
     const missed = [
@@ -302,14 +304,13 @@ export class PlaySession {
         qs.flatMap((q) =>
           (q.result?.words ?? [])
             .filter((w) => w.ok === 'miss')
-            .map((w) => norm(w.t))
-            .filter((w) => !STOP.has(w)),
+            .map((w) => L.norm(w.t))
+            .filter((w) => !L.stop.has(w)),
         ),
       ),
     ].slice(0, 8);
     this.singSummary.set({ passed, total: qs.length, score, missed });
     const kidId = this.kidId();
-    const song = this.song();
     if (kidId === null || !song) return;
     if (!this.singAll()) this.rewards.earn(kidId, song, 'singPractice');
     else if (score >= 80) this.rewards.earn(kidId, song, 'singAll'); // Whisper 偶爾會聽錯字，所以 80% 句子過關就算

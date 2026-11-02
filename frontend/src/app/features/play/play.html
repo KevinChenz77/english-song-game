@@ -40,13 +40,13 @@
     @if (content.hasValue()) {
       @switch (session.mode()) {
         @case ('quiz') {
-          <app-quiz-panel />
+          <app-quiz-panel [dicts]="dicts()" />
         }
         @case ('sing') {
           <app-sing-panel />
         }
       }
-      <app-lyrics-panel [dict]="dict()" />
+      <app-lyrics-panel [dicts]="dicts()" />
     } @else if (content.error(); as e) {
       <div class="lyrics-msg">
         <p>{{ e.message }}</p>
@@ -103,4 +103,4 @@
     <div class="ctrl">設定打開時，點歌詞下方的中文可以修改翻譯。</div>
   </details>
 </div>
-<app-word-pop [dict]="dict()" />
+<app-word-pop [dicts]="dicts()" />
