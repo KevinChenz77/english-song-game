@@ -4,7 +4,9 @@ import { Rewards } from './rewards';
 import { SpeechRecognizer } from './speech-recognizer';
 import { LyricLine, PlayMode, QuizLevel, Song } from './models/song.model';
 import { Question } from './game/quiz';
-import { ScoredWord } from './game/scoring';
+import { ScoredWord, scoreLine } from './game/scoring';
+import { STOP, norm } from './game/text';
+import { BackingTrack } from './backing-track';
 
 /** 唱唱看的一句。 */
 export interface SingStop {
@@ -14,6 +16,8 @@ export interface SingStop {
   tries: number;
   passed?: boolean; // 過關後重唱沒過也保留 true
   result?: { words: ScoredWord[]; score: number };
+  state?: 'ready' | 'rec' | 'busy' | 'pass' | 'fail'; // 唱唱看畫面狀態（D）；沒有 = ready
+  msg?: string; // 錄音／辨識失敗時給小朋友的提示（D）
 }
 
 export interface SingSummary {
@@ -37,6 +41,7 @@ export class PlaySession {
   private readonly player = inject(YoutubePlayer);
   private readonly rewards = inject(Rewards);
   private readonly recognizer = inject(SpeechRecognizer);
+  private readonly backing = inject(BackingTrack); // 唱唱看伴奏（D）
 
   readonly kidId = signal<number | null>(null);
   readonly song = signal<Song | null>(null);
@@ -117,18 +122,125 @@ export class PlaySession {
     throw new Error('TODO wave 2 (A): PlaySession.finishQuiz');
   }
 
-  /** 唱唱看結算（D）：練習 🎤、挑戰 80% ⭐＋👑，寫 singSummary。 */
+  /** 唱唱看結算（D）：練習 🎤、挑戰 80% ⭐＋👑，寫 singSummary。跳過的句子先回去補唸（makeup）。 */
   private finishSing(): void {
-    throw new Error('TODO wave 2 (D): PlaySession.finishSing');
+    const qs = this.questions() as SingStop[];
+    if (!qs.length || this.finished()) return;
+    const left = qs.findIndex((q) => !q.done);
+    if (left >= 0) {
+      if (!this.makeup()) {
+        this.makeup.set(true);
+        this.singJump(qs[left].i);
+      }
+      return;
+    }
+    this.finished.set(true);
+    const passed = qs.filter((q) => q.passed).length;
+    const score = Math.round((passed / qs.length) * 100);
+    const missed = [
+      ...new Set(
+        qs.flatMap((q) =>
+          (q.result?.words ?? [])
+            .filter((w) => w.ok === 'miss')
+            .map((w) => norm(w.t))
+            .filter((w) => !STOP.has(w)),
+        ),
+      ),
+    ].slice(0, 8);
+    this.singSummary.set({ passed, total: qs.length, score, missed });
+    const kidId = this.kidId();
+    const song = this.song();
+    if (kidId === null || !song) return;
+    if (!this.singAll()) this.rewards.earn(kidId, song, 'singPractice');
+    else if (score >= 80) this.rewards.earn(kidId, song, 'singAll'); // Whisper 偶爾會聽錯字，所以 80% 句子過關就算
   }
 
-  /** 「🎤 換你唸」（D）。必須在點擊當下同步呼叫 recognizer.record()，之前不能有 await。 */
-  startSing(): void {
-    throw new Error('TODO wave 2 (D): PlaySession.startSing');
+  /**
+   * 「🎤 換你唸」（D）。必須在點擊當下同步呼叫 recognizer.record()，之前不能有 await。
+   * 順序：同步 record() → 暫停影片 → 同步伴奏 play()，之後才 await。onLevel 收 0～1 音量。
+   */
+  async startSing(onLevel: (level: number) => void = () => {}): Promise<void> {
+    const idx = this.active();
+    if (idx === null) return;
+    const line = this.lines()[(this.questions() as SingStop[])[idx].i];
+    try {
+      speechSynthesis.cancel(); // ponytail: 單字發音的 <audio> 沒停；Pronunciation 有 stop() 時改呼叫它
+    } catch {
+      /* 沒有 speechSynthesis */
+    }
+    this.patchStop(idx, { state: 'rec', msg: undefined });
+    const rec = this.recognizer.record(onLevel); // 先開麥克風，再開伴奏，都在點擊當下
+    this.player.pause();
+    this.backing.play(line.t);
+    // 只在這句還是同一次錄音／辨識時才寫回（換模式、跳過後就丟掉結果）
+    const still = (state: SingStop['state']) =>
+      this.active() === idx && this.singStopAt(idx)?.state === state;
+    const retry = (state: SingStop['state'], msg: string) => {
+      if (still(state)) this.patchStop(idx, { state: 'ready', msg });
+    };
+    let audio: Float32Array | null;
+    try {
+      audio = await rec;
+    } catch (e) {
+      const err = e as Error;
+      return retry(
+        'rec',
+        err.name === 'NotAllowedError'
+          ? '麥克風被擋住了，請在瀏覽器的網站設定裡允許使用麥克風。'
+          : '麥克風打不開：' + err.message,
+      );
+    } finally {
+      this.backing.stop();
+    }
+    if (!audio) return retry('rec', '好像沒聽到喔，靠近一點再唸一次 🎤');
+    if (!still('rec')) return;
+    this.patchStop(idx, { state: 'busy' });
+    let text: string;
+    try {
+      text = await this.recognizer.transcribe(audio);
+    } catch {
+      return retry('busy', '辨識失敗了，再試一次');
+    }
+    if (!text) return retry('busy', '好像沒聽到喔，靠近一點再唸一次 🎤');
+    if (!still('busy')) return;
+    const result = scoreLine(line.text, text);
+    const s = this.singStopAt(idx)!;
+    this.patchStop(
+      idx,
+      result.score >= 0.7
+        ? { result, state: 'pass', passed: true }
+        : { result, state: 'fail', tries: s.tries + 1 },
+    );
   }
 
   /** 下一句／跳過（D）。點擊時同步呼叫，同步 player.play()。 */
   nextStop(): void {
-    throw new Error('TODO wave 2 (D): PlaySession.nextStop');
+    const idx = this.active();
+    if (idx === null) return;
+    this.backing.stop();
+    this.patchStop(idx, { done: true });
+    this.active.set(null);
+    const left = (this.questions() as SingStop[]).find((q) => !q.done);
+    if (!left) {
+      this.player.pause();
+      this.finish();
+    } else if (this.makeup()) this.singJump(left.i);
+    else this.player.play(); // 在點擊當下播放，iOS 才不會擋
+  }
+
+  private singStopAt(idx: number): SingStop | undefined {
+    return (this.questions() as SingStop[])[idx];
+  }
+
+  private patchStop(idx: number, p: Partial<SingStop>): void {
+    this.questions.update((qs) =>
+      (qs as SingStop[]).map((q, n) => (n === idx ? { ...q, ...p } : q)),
+    );
+  }
+
+  /** 跳回第 i 句前 0.3 秒播放（補唸）。 */
+  private singJump(i: number): void {
+    this.player.seek(this.lines()[i].t + this.offset() - 0.3);
+    this.player.play();
   }
 }
