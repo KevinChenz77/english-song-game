@@ -3,6 +3,7 @@ data/
 __pycache__/
 *.py[cod]
 .venv/
+backend/.venv-tools/
 .pytest_cache/
 
 # Node / Angular

@@ -1,0 +1,6 @@
+# Only for backend/tools/build_content.py on the content engineer's machine (Japanese songs). Never needed by the server.
+fugashi==1.5.2
+unidic-lite==1.0.8
+cutlet==0.5.2
+jaconv==0.5.0
+mojimoji==0.0.13
