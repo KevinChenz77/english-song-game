@@ -5,24 +5,33 @@
   height: min(60vh, 520px);
   overflow-y: auto;
   position: relative;
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lyrics {
+    scroll-behavior: auto;
+  }
 }
 .line {
   font-size: 20px;
   line-height: 1.5;
-  padding: 10px 6px;
+  padding: 10px 6px 10px 10px;
   border-radius: 10px;
-  color: var(--muted);
+  color: var(--ink-2, var(--muted));
   transition: background 0.2s;
   border-bottom: 1px solid #eef4fa;
 }
-.line.past {
-  color: #9db0c2;
+.en {
+  line-height: 2; /* 撐出單字的點擊高度 */
 }
+.line.past {
+  color: var(--muted);
+}
+/* 目前句：不改字級／字重（避免重新排版），只換底色、文字色和左邊色條 */
 .line.now {
-  background: #fff6d6;
+  background: var(--hl-bg, #fff6d6);
   color: var(--ink);
-  font-size: 23px;
-  font-weight: 600;
+  box-shadow: inset 4px 0 0 var(--hl);
 }
 .line.ok .en::after {
   content: ' ✅';
@@ -35,9 +44,7 @@
   margin-top: 2px;
 }
 .line.now .zh {
-  font-size: 18px;
   color: var(--ink);
-  font-weight: 500;
 }
 button.zh {
   background: none;
@@ -48,6 +55,15 @@ button.zh {
   text-align: left;
   cursor: pointer;
   text-decoration: underline dashed var(--accent2);
+}
+button.zh.empty {
+  color: var(--accent);
+  text-decoration: none;
+  border: 2px dashed var(--line-strong, var(--accent));
+  border-radius: 999px;
+  padding: 2px 12px;
+  margin-top: 6px;
+  min-height: 36px;
 }
 .vocab {
   display: flex;
@@ -77,12 +93,31 @@ button.zh {
   padding: 0;
   margin-right: 6px;
   vertical-align: middle;
-  background: var(--accent2);
+  background: transparent;
+  color: var(--accent);
+  border: 2px solid var(--line-strong, var(--accent));
+  border-radius: 50%;
 }
+.seek.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+/* 單字按鈕：看起來和文字一樣；上下 padding 撐到約 44px 可點高度，負 margin 抵銷，不撐開行距 */
 .w {
-  cursor: pointer;
+  font: inherit;
+  line-height: inherit;
+  color: inherit;
+  background: none;
+  min-height: 0;
+  min-width: 28px; /* 「a」這種短字也好點 */
+  margin: -2px 0;
+  padding: 2px 2px;
   border-radius: 6px;
-  padding: 0 1px;
+}
+.w:focus-visible {
+  outline: 3px solid var(--focus, var(--accent));
+  outline-offset: 0;
 }
 .w:hover {
   background: #e3f1ff;

@@ -71,10 +71,8 @@ export class LyricsPanel {
       const box = this.box().nativeElement,
         r = box.querySelector<HTMLElement>(`[data-line="${i}"]`);
       if (r)
-        box.scrollTo({
-          top: r.offsetTop - box.clientHeight / 2 + r.clientHeight / 2,
-          behavior: 'smooth',
-        });
+        // 平滑與否交給 CSS scroll-behavior（reduced-motion 時關掉）
+        box.scrollTo({ top: r.offsetTop - box.clientHeight / 2 + r.clientHeight / 2 });
     });
   }
 

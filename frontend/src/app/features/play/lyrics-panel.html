@@ -10,7 +10,7 @@
     >
       <div class="en">
         @if (session.mode() === 'listen') {
-          <button type="button" class="seek" aria-label="從這句開始播" (click)="seek(r.l.t)">
+          <button type="button" class="seek" [class.on]="now" aria-label="從這句開始播" (click)="seek(r.l.t)">
             ▶
           </button>
         }
@@ -20,21 +20,23 @@
               w.tok
             }}</span>
           } @else {
-            <span
+            <button
+              type="button"
               class="w"
               [class.known]="w.known"
               [class.sung]="now && k < sung()"
               (click)="session.tapWord(w.tok)"
-              >{{ w.tok }}</span
-            >
+            >{{ w.tok }}</button>
           }
           {{ ' ' }}
         }
       </div>
-      @let zh = session.translations()[r.l.text] || '（還沒有翻譯，也可以點這裡自己填）';
+      @let zh = session.translations()[r.l.text];
       @if (session.parentOpen()) {
-        <button type="button" class="zh" (click)="editZh(r.l.text)">{{ zh }}</button>
-      } @else {
+        <button type="button" class="zh" [class.empty]="!zh" (click)="editZh(r.l.text)">
+          {{ zh || '＋ 填翻譯' }}
+        </button>
+      } @else if (zh) {
         <div class="zh">{{ zh }}</div>
       }
       @if (r.chips.length) {
