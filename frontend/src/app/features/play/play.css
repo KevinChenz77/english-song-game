@@ -17,7 +17,7 @@
   font-size: 26px;
 }
 /* 手機：分頁自己一行、三等分（在 .bar 裡換行，第一行 ← 回去／星星仍和 💾 對齊）。
-   負的右邊距吃回 .bar 留給 💾 的 110px，第二行可以用滿寬度。 */
+   負的右邊距吃回 .bar 留給 💾 的 110px（和 styles.css 的 .bar padding-right 一致，要一起改），第二行可以用滿寬度。 */
 @media (max-width: 599px) {
   .tabs {
     order: 1;
