@@ -1,0 +1,85 @@
+.box {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+.sent {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 8px 0;
+}
+.zhq {
+  font-size: 18px;
+  color: #5f7489;
+}
+.modes,
+.chips {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+.modes button.on {
+  background: var(--accent);
+  color: #fff;
+}
+.mic {
+  font-size: 24px;
+  min-height: 64px;
+  padding: 10px 26px;
+  border-radius: 999px;
+  margin: 6px;
+}
+.mic.rec {
+  background: var(--bad);
+  animation: pulse 1s infinite;
+}
+.ghost {
+  margin: 6px;
+}
+.lvlbar {
+  height: 12px;
+  background: #eef4fa;
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 10px auto;
+  max-width: 320px;
+}
+.lvlbar > div {
+  height: 100%;
+  width: 0;
+  background: var(--good);
+  transition: width 0.1s;
+}
+/* 顏色比舊版深一點，白底對比度過 WCAG AA */
+.sw-ok {
+  color: #1e7d4a;
+}
+.sw-miss {
+  all: unset;
+  color: #b35c00;
+  padding: 4px 2px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.sw-miss:focus-visible {
+  outline: 2px solid var(--accent);
+}
+.big-ok {
+  font-size: 28px;
+}
+.chip {
+  font-size: 15px;
+  min-height: 44px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #eef6ff;
+  color: var(--ink);
+  font-weight: 400;
+}
+.note:empty {
+  margin: 0;
+}
