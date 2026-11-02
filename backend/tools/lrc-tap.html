@@ -1,0 +1,126 @@
+<!doctype html>
+<!-- 敲拍子對歌詞時間（docs/multilingual.md §5.2）。本機用：python3 -m http.server 8002 -d backend/tools → http://localhost:8002/lrc-tap.html
+     不存、不送任何東西；結果自己複製到 data/lrc/<id>.lrc（gitignored，記得備份）。 -->
+<html lang="zh-Hant">
+<meta charset="utf-8">
+<title>LRC 敲拍子</title>
+<style>
+  body { font: 16px system-ui, sans-serif; margin: 16px; max-width: 900px; }
+  textarea { width: 100%; height: 9em; font: 14px ui-monospace, monospace; }
+  label { margin-right: 1em; }
+  #lines div { padding: 2px 6px; white-space: pre; }
+  #lines .cur { background: #fff3b0; }
+  #lines .seg { background: #ffb347; border-radius: 4px; }
+  #tap { font-size: 1.6em; padding: .4em 2em; margin: .5em 0; }
+  #err { color: #c00; white-space: pre-wrap; }
+</style>
+<p>
+  <label>YouTube videoId <input id="vid" size="13"></label>
+  <button id="load">載入影片</button>
+</p>
+<div id="player"></div>
+<p>歌詞（一行一句；可以貼既有 LRC，會保留句子時間）。行內用空白（保留）或 <code>|</code>（輸出時拿掉）標出逐字模式要敲的位置。</p>
+<textarea id="src" spellcheck="false"></textarea>
+<p>
+  <label><input type="radio" name="mode" value="line" checked> 句子模式（每句開頭敲一下）</label>
+  <label><input type="radio" name="mode" value="word"> 逐字模式（每段開頭敲一下，保留已有的句子時間）</label><br>
+  <label>速度 <select id="rate"><option>1</option><option>0.75</option><option>0.5</option></select></label>
+  <label>反應時間修正（秒）<input id="delay" type="number" step="0.05" value="-0.1" style="width:5em"></label>
+  <button id="start">開始（從第一句）</button>
+</p>
+<button id="tap">敲（空白鍵）</button> <span>Backspace＝退一下</span>
+<div id="lines"></div>
+<p><button id="out">產生 LRC</button></p>
+<div id="err"></div>
+<textarea id="result" readonly spellcheck="false"></textarea>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const STAMP = /<\d+:\d+(?:\.\d+)?>/g;
+  let player, lines = [], li = 0, si = 0, history = [];
+
+  // mm:ss.xx ⇄ 秒
+  const fmt = (t) => { t = Math.max(0, Math.round(t * 100) / 100); const m = Math.floor(t / 60); return `${String(m).padStart(2, '0')}:${(t - m * 60).toFixed(2).padStart(5, '0')}`; };
+  const sec = (s) => { const [m, x] = s.split(':'); return +m * 60 + parseFloat(x); };
+
+  // 一行 → { plain: 輸出要一字不差的原句, t: 既有句子時間, segs: [段落文字（含後面的空白）] }
+  function parse(raw) {
+    const m = raw.match(/^\[(\d+:\d+(?:\.\d+)?)\](.*)$/);
+    const body = (m ? m[2] : raw).replace(STAMP, '').trim();
+    const segs = body.includes('|') ? body.split('|') : body.split(/(?<= )(?=\S)/);
+    return { plain: segs.join(''), t: m ? sec(m[1]) : null, segs: segs.filter((s) => s !== ''), times: [] };
+  }
+
+  const mode = () => document.querySelector('[name=mode]:checked').value;
+  const tapsIn = (l) => (mode() === 'line' ? 1 : Math.max(1, l.segs.length));
+
+  function render() {
+    $('lines').innerHTML = '';
+    lines.forEach((l, i) => {
+      const d = document.createElement('div');
+      if (i === li) d.className = 'cur';
+      const head = l.t == null ? '[--:--.--] ' : `[${fmt(l.t)}] `;
+      if (mode() === 'word' && i === li && l.segs.length) {
+        d.append(head);
+        l.segs.forEach((s, k) => { const sp = document.createElement('span'); sp.textContent = s; if (k === si) sp.className = 'seg'; d.append(sp); });
+      } else d.textContent = head + (l.plain || '（空行）');
+      $('lines').append(d);
+    });
+    $('lines').children[li]?.scrollIntoView({ block: 'nearest' });
+  }
+
+  function tap() {
+    if (!player || li >= lines.length) return;
+    const t = Math.max(0, player.getCurrentTime() + Number($('delay').value));
+    const l = lines[li];
+    history.push([li, si, l.t, [...l.times]]);
+    if (mode() === 'line') l.t = t;
+    else { l.times[si] = t; if (si === 0 && l.t == null) l.t = t; }
+    if (++si >= tapsIn(l)) { li++; si = 0; }
+    render();
+  }
+
+  function undo() {
+    const h = history.pop();
+    if (!h) return;
+    [li, si] = h; lines[li].t = h[2]; lines[li].times = h[3];
+    render();
+  }
+
+  function output() {
+    const bad = [], out = [];
+    lines.forEach((l, i) => {
+      if (l.t == null) return bad.push(`第 ${i + 1} 句沒有時間`);
+      const words = mode() === 'word' && l.segs.length > 1 && l.times.length === l.segs.length;
+      const line = `[${fmt(l.t)}]` + (words ? l.segs.map((s, k) => `<${fmt(l.times[k])}>${s}`).join('') : l.plain);
+      // 去掉時間戳後必須和原句一字不差（翻譯、tokens 用整句當 key）
+      if (line.replace(/^\[[^\]]*\]/, '').replace(STAMP, '').trim() !== l.plain) bad.push(`第 ${i + 1} 句去掉時間後和原句不同`);
+      out.push(line);
+    });
+    $('err').textContent = bad.join('\n');
+    $('result').value = bad.length ? '' : out.join('\n') + '\n';
+  }
+
+  $('load').onclick = () => {
+    const id = $('vid').value.trim();
+    if (player) return player.loadVideoById(id);
+    const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; document.head.append(s);
+    window.onYouTubeIframeAPIReady = () => { player = new YT.Player('player', { videoId: id, width: 640, height: 360, playerVars: { playsinline: 1 } }); };
+  };
+  $('rate').onchange = () => player?.setPlaybackRate(Number($('rate').value));
+  $('start').onclick = () => {
+    lines = $('src').value.split('\n').filter((x) => x.trim() !== '').map(parse);
+    li = si = 0; history = [];
+    player?.setPlaybackRate(Number($('rate').value));
+    if (mode() === 'word' && lines[0]?.t != null) player?.seekTo(Math.max(0, lines[0].t - 2), true);
+    render();
+  };
+  document.querySelectorAll('[name=mode]').forEach((r) => (r.onchange = render));
+  $('tap').onclick = (e) => e.detail && tap(); // 空白鍵按在按鈕上的 click（detail 0）已由 keydown 處理
+  $('out').onclick = output;
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+    if (e.code === 'Space') { e.preventDefault(); tap(); }
+    if (e.code === 'Backspace') { e.preventDefault(); undo(); }
+  });
+</script>
+</html>
