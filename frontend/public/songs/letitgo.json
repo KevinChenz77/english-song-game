@@ -8,6 +8,7 @@
     { "id": "L0MK7qz13bU", "label": "Sing-Along 版", "offset": 4.5 },
     { "id": "moSFlvxnbgk", "label": "電影片段版", "offset": 0 }
   ],
+  "karaoke": { "id": "KmXKiJu_Q_g", "offset": -1.3 },
   "sticker": "❄️",
   "quiz": {
     "normal": ["snow", "queen", "girl", "go", "door", "cold", "free", "go", "storm", "past"],

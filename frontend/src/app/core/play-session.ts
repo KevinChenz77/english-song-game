@@ -26,8 +26,8 @@ export interface SingSummary {
 /**
  * 遊玩流程的唯一真相（architecture §4）。第二波各自只填自己負責的方法：
  * - E：open、onTick、setMode、setVideo、setOffset、tapWord（聽聽看）
- * - A：answer、finish 的填填看分支
- * - D：startSing、nextStop、finish 的唱唱看分支
+ * - A：answer、finishQuiz（填填看）
+ * - D：startSing、nextStop、finishSing（唱唱看，含伴奏）
  * 規則：流程不用 effect 驅動；陣列／物件 signal 一律 set()/update() 產生新值，不就地修改。
  * 這些 signal 只由本服務的方法寫入（parentOpen 例外，由 Play 的 <details> toggle 寫）。
  * iOS：answer()、nextStop() 等由點擊直接呼叫的方法，內部要同步呼叫 player.play()／recognizer.record()，不能先 await。
@@ -104,9 +104,22 @@ export class PlaySession {
     throw new Error('TODO wave 2 (A): PlaySession.answer');
   }
 
-  /** 結算（A：填填看全一次答對才 earn；D：唱唱看練習 🎤、挑戰 80% ⭐＋👑）。影片結束時也會呼叫。 */
+  /** 結算，影片結束時也會呼叫。分派到 finishQuiz（A）／finishSing（D），兩人各改各的，不碰這個方法。 */
   finish(): void {
-    throw new Error('TODO wave 2 (A/D): PlaySession.finish');
+    const m = this.mode();
+    if (m === 'quiz') this.finishQuiz();
+    else if (m === 'sing') this.finishSing();
+    else this.finished.set(true);
+  }
+
+  /** 填填看結算（A）：該難度全一次答對才 earn。 */
+  private finishQuiz(): void {
+    throw new Error('TODO wave 2 (A): PlaySession.finishQuiz');
+  }
+
+  /** 唱唱看結算（D）：練習 🎤、挑戰 80% ⭐＋👑，寫 singSummary。 */
+  private finishSing(): void {
+    throw new Error('TODO wave 2 (D): PlaySession.finishSing');
   }
 
   /** 「🎤 換你唸」（D）。必須在點擊當下同步呼叫 recognizer.record()，之前不能有 await。 */
