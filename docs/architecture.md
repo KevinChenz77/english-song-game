@@ -439,3 +439,9 @@ fetch('config.json', { cache: 'no-store' })
 | 啟動 | 後端自訂 | `test -n "$API_URL"` 失敗就退出 → 寫入 `dist/frontend/browser/config.json`（`{"apiBaseUrl":"$API_URL"}`）→ 靜態伺服器（DevOps 選） |
 
 前端靜態伺服器需求：未知路徑回 `index.html`（SPA 回退）；`config.json` 與 `index.html` 設 `Cache-Control: no-cache`；其餘帶 hash 的檔案可長期快取；必須 HTTPS（麥克風需要）。
+
+---
+
+## 13. 多語言（日文起步）
+
+設計稿見 **[multilingual.md](multilingual.md)**：每個語言的行為集中在 `core/lang.ts`（前端）與 `build_content.py` 的 `LANGS`（內容工具），歌曲 json 只宣告 `lang`（沒寫＝`'en'`，英文歌不用改）。日文的斷詞、讀音、羅馬拼音在 `build_content.py` 預先算好存進 content.db 的 `tokens` 表，API 回應多一個選填的 `tokens` 欄位（向下相容，待 TPM 定案）。沒有 LRCLIB 的歌用本機 `data/lrc/<id>.lrc`（gitignored）手動對時間。
