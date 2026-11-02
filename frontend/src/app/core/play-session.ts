@@ -8,6 +8,7 @@ import { ScoredWord, scoreLine } from './game/scoring';
 import { STOP, norm } from './game/text';
 import { BackingTrack } from './backing-track';
 import { Pronunciation } from './pronunciation';
+import { Sfx } from './sfx';
 import { load, save } from './storage';
 import { saveTranslation } from './translations';
 import { RewardKey } from './models/kid.model';
@@ -53,6 +54,7 @@ export class PlaySession {
   private readonly recognizer = inject(SpeechRecognizer);
   private readonly pron = inject(Pronunciation);
   private readonly backing = inject(BackingTrack); // 唱唱看伴奏（D）
+  private readonly sfx = inject(Sfx);
   private singRun = 0; // 唱唱看錄音／辨識的次數；舊的結果對不上就丟掉（D）
 
   readonly kidId = signal<number | null>(null);
@@ -224,12 +226,14 @@ export class PlaySession {
     const q = n === null ? undefined : this.quizQs()[n];
     if (n === null || !q || q.done) return;
     if (word !== q.w) {
+      this.sfx.wrong();
       this.questions.set(this.quizQs().map((x, k) => (k === n ? { ...x, tries: x.tries + 1 } : x)));
       return;
     }
     const qs = this.quizQs().map((x, k) => (k === n ? { ...x, done: true } : x));
     this.questions.set(qs);
     this.active.set(null);
+    this.sfx.correct();
     this.pron.say(q.w); // 答對唸一次單字，和舊版一樣
     // 在點擊當下就播放，iOS 才不會擋
     const left = qs.find((x) => !x.done);
@@ -356,6 +360,7 @@ export class PlaySession {
     if (!text) return retry('busy', '好像沒聽到喔，靠近一點再唸一次 🎤');
     if (!still('busy')) return;
     const result = scoreLine(line.text, text);
+    if (result.score >= 0.7) this.sfx.correct();
     this.patchStop(
       idx,
       result.score >= 0.7

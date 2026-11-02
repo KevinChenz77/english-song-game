@@ -1,5 +1,6 @@
 import { Service, inject, signal } from '@angular/core';
 import { KidsStore } from './kids-store';
+import { Sfx } from './sfx';
 import { RewardKey } from './models/kid.model';
 import { Song } from './models/song.model';
 import { REWARDS, rewardSticker, rewardText } from './game/reward-rules';
@@ -12,6 +13,7 @@ export interface Celebration {
 @Service()
 export class Rewards {
   private readonly kids = inject(KidsStore);
+  private readonly sfx = inject(Sfx);
 
   /** 慶祝畫面內容；null = 關閉。連續獲得時文字疊加。 */
   private readonly _celebration = signal<Celebration | null>(null);
@@ -32,6 +34,7 @@ export class Rewards {
       emoji: sticker || (REWARDS[key].star ? '⭐' : '💎'),
       text: c ? `${c.text}\n${text}` : text,
     }));
+    this.sfx.celebrate();
   }
 
   dismiss() {

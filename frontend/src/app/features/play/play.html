@@ -89,6 +89,18 @@
         延後 1 秒 ⏩
       </button>
     </div>
+    <div class="ctrl">
+      <!-- 預設關；aria-label 固定，開關狀態由 aria-pressed 表達 -->
+      <button
+        type="button"
+        [class.ghost]="!sfx.on()"
+        aria-label="🔔 音效"
+        [attr.aria-pressed]="sfx.on()"
+        (click)="sfx.toggle()"
+      >
+        🔔 音效：{{ sfx.on() ? '開' : '關' }}
+      </button>
+    </div>
     <div class="ctrl">設定打開時，點歌詞下方的中文可以修改翻譯。</div>
   </details>
 </div>
