@@ -3,7 +3,11 @@ import { YoutubePlayer } from './youtube-player';
 import { Rewards } from './rewards';
 import { SpeechRecognizer } from './speech-recognizer';
 import { LyricLine, PlayMode, QuizLevel, Song } from './models/song.model';
-import { Question } from './game/quiz';
+import { Question, pickQuestions } from './game/quiz';
+import { norm } from './game/text';
+import { Pronunciation } from './pronunciation';
+import { load, save } from './storage';
+import { saveTranslation } from './translations';
 import { ScoredWord } from './game/scoring';
 
 /** 唱唱看的一句。 */
@@ -37,6 +41,7 @@ export class PlaySession {
   private readonly player = inject(YoutubePlayer);
   private readonly rewards = inject(Rewards);
   private readonly recognizer = inject(SpeechRecognizer);
+  private readonly pron = inject(Pronunciation);
 
   readonly kidId = signal<number | null>(null);
   readonly song = signal<Song | null>(null);
@@ -62,40 +67,135 @@ export class PlaySession {
     return this.lines().findIndex((l) => t >= l.t && t < l.end);
   });
 
-  /** 開新的一局（E）。換了歌：videoIndex 歸 0；offset 讀 off_<videoId> 或預設。 */
+  /** 點單字的小視窗（norm 過的字；null = 關閉）。3 秒自動關。 */
+  private readonly _popWord = signal<string | null>(null);
+  readonly popWord = this._popWord.asReadonly();
+  private popTimer?: ReturnType<typeof setTimeout>;
+  private prevLine = -1; // onTick 上一次的目前句（記 heard 用；拖進度條跳太多不算）
+
+  /** 開新的一局（E）。換了歌：videoIndex 歸 0；offset 讀 off_<videoId> 或預設。mode/quizLevel/singAll 沿用。 */
   open(kidId: number, song: Song, lines: LyricLine[], translations: Record<string, string>): void {
-    void [kidId, song, lines, translations, this.player, this.rewards, this.recognizer];
-    throw new Error('TODO wave 2 (E): PlaySession.open');
+    if (this.song()?.id !== song.id) this.videoIndex.set(0);
+    this.kidId.set(kidId);
+    this.song.set(song);
+    this.lines.set(lines);
+    this.translations.set(translations);
+    this.parentOpen.set(false); // 新畫面的 <details> 是關的
+    this.offset.set(this.savedOffset());
+    this.setMode(this.mode());
   }
 
-  /** YoutubePlayer 每 100ms 呼叫（E）：寫 time、記錄 heard、聽完 80% earn('listen')、句尾暫停設 active、最後一句後 finish()。 */
+  /**
+   * YoutubePlayer 每 100ms 呼叫（E）：t 是影片時間，扣掉 offset 成歌詞時間。
+   * 記錄 heard、聽聽看聽完 80% earn('listen')；填填看／唱唱看：唱到題目句尾 −0.15 秒暫停並設 active，
+   * 超過最後一句 → finish()（finished() 為 true 後不再呼叫）。
+   */
   onTick(t: number): void {
-    void t;
-    throw new Error('TODO wave 2 (E): PlaySession.onTick');
+    const lines = this.lines();
+    if (!lines.length) return;
+    t -= this.offset();
+    this.time.set(t);
+    const i = this.currentLine();
+    if (i >= 0 && i !== this.prevLine) {
+      // 只算照順序播到的句子（容許計時器變慢時一次跳 3 句），拖進度條不算
+      if (i > this.prevLine && i - this.prevLine <= 3) {
+        const before = this.heard().size;
+        const s = new Set(this.heard());
+        for (let k = this.prevLine + 1; k <= i; k++) s.add(k);
+        this.heard.set(s);
+        const need = lines.length * 0.8;
+        const kidId = this.kidId(),
+          song = this.song();
+        if (this.mode() === 'listen' && before < need && s.size >= need && kidId !== null && song)
+          this.rewards.earn(kidId, song, 'listen');
+      }
+      this.prevLine = i;
+    }
+    if (this.mode() === 'listen') return;
+    // 填填看和唱唱看共用：唱到句尾就停下來
+    const n = this.questions().findIndex((q) => !q.done && t >= q.endT - 0.15 && t < q.endT + 1.5);
+    if (n >= 0) {
+      if (this.player.playing()) this.player.pause();
+      this.active.set(n);
+    }
+    if (t > lines[lines.length - 1].end && !this.finished()) this.finish();
   }
 
-  /** 切換玩法並重新出題（E）。 */
+  /** 切換玩法並重新出題（E）。填填看依 quizLevel、唱唱看依 singAll（練習 = 前 8 句）。影片回到開頭並暫停。 */
   setMode(m: PlayMode): void {
-    void m;
-    throw new Error('TODO wave 2 (E): PlaySession.setMode');
+    const lines = this.lines(),
+      song = this.song();
+    this.mode.set(m);
+    if (m === 'quiz' && song) {
+      const qs = pickQuestions(lines, song.quiz[this.quizLevel()]);
+      this.questions.set(qs);
+      this.pron.prefetch(qs.slice(0, 8).map((q) => q.w)); // 先慢慢查好答案的發音
+    } else if (m === 'sing') {
+      this.questions.set(
+        (this.singAll() ? lines : lines.slice(0, 8)).map((l, i) => ({
+          i,
+          endT: l.end,
+          done: false,
+          tries: 0,
+        })),
+      );
+    } else this.questions.set([]);
+    this.recognizer.stop();
+    this.active.set(null);
+    this.heard.set(new Set());
+    this.prevLine = -1;
+    this.time.set(-1);
+    this.makeup.set(false);
+    this.finished.set(false);
+    this.singSummary.set(null);
+    this.player.seek(0);
+    this.player.pause();
   }
 
   /** 換影片版本（E）。 */
   setVideo(i: number): void {
-    void i;
-    throw new Error('TODO wave 2 (E): PlaySession.setVideo');
+    this.videoIndex.set(i);
+    this.offset.set(this.savedOffset());
+    const v = this.song()?.videos[i];
+    if (v) this.player.cue(v.id);
+    this.setMode(this.mode());
   }
 
-  /** 調歌詞時間差並存 off_<videoId>（E）。 */
+  /** 調歌詞時間差並存 off_<videoId>（E）。四捨五入到 0.1 秒；>0 = 歌詞延後顯示。 */
   setOffset(v: number): void {
-    void v;
-    throw new Error('TODO wave 2 (E): PlaySession.setOffset');
+    const o = Math.round(v * 10) / 10;
+    this.offset.set(o);
+    const id = this.song()?.videos[this.videoIndex()]?.id;
+    if (id) save('off_' + id, o);
   }
 
-  /** 點單字：發音＋小視窗（E）。點擊時同步呼叫。 */
-  tapWord(word: string): void {
-    void word;
-    throw new Error('TODO wave 2 (E): PlaySession.tapWord');
+  /** 家長修改一句的中文（存 tr_<songId>，覆蓋伺服器翻譯）。 */
+  editTranslation(line: string, zh: string): void {
+    const song = this.song();
+    if (!song) return;
+    saveTranslation(song.id, line, zh);
+    this.translations.update((t) => ({ ...t, [line]: zh.trim() }));
+  }
+
+  /** 點單字：發音＋小視窗（E）。點擊時同步呼叫（iOS 發音要在手勢裡）。聽聽看播放中會先暫停。 */
+  tapWord(token: string): void {
+    const w = norm(token);
+    if (!w) return;
+    if (this.mode() === 'listen' && this.player.playing()) this.player.pause();
+    this.pron.say(w);
+    this._popWord.set(w);
+    clearTimeout(this.popTimer);
+    this.popTimer = setTimeout(() => this._popWord.set(null), 3000);
+  }
+
+  closePop(): void {
+    clearTimeout(this.popTimer);
+    this._popWord.set(null);
+  }
+
+  private savedOffset(): number {
+    const v = this.song()?.videos[this.videoIndex()];
+    return v ? load('off_' + v.id, v.offset) : 0;
   }
 
   /** 填填看作答（A）。點擊／Enter 時同步呼叫，答對後同步 player.play()。 */

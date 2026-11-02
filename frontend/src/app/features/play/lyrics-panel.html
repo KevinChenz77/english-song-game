@@ -1,0 +1,56 @@
+<div class="lyrics" #box>
+  @for (r of rows(); track $index; let i = $index) {
+    @let now = i === session.currentLine();
+    <div
+      class="line"
+      [attr.data-line]="i"
+      [class.now]="now"
+      [class.past]="i < session.currentLine()"
+      [class.ok]="r.passed"
+    >
+      <div class="en">
+        @if (session.mode() === 'listen') {
+          <button type="button" class="seek" aria-label="從這句開始播" (click)="seek(r.l.t)">
+            ▶
+          </button>
+        }
+        @for (w of r.words; track $index; let k = $index) {
+          @if (w.blank) {
+            <span class="blank" [class.ok]="r.blankOk" [class.sung]="now && k < sung()">{{
+              w.tok
+            }}</span>
+          } @else {
+            <span
+              class="w"
+              [class.known]="w.known"
+              [class.sung]="now && k < sung()"
+              (click)="session.tapWord(w.tok)"
+              >{{ w.tok }}</span
+            >
+          }
+          {{ ' ' }}
+        }
+      </div>
+      @let zh = session.translations()[r.l.text] || '（翻譯載入中… 也可以點這裡自己填）';
+      @if (session.parentOpen()) {
+        <button type="button" class="zh" (click)="editZh(r.l.text)">{{ zh }}</button>
+      } @else {
+        <div class="zh">{{ zh }}</div>
+      }
+      @if (r.chips.length) {
+        <div class="vocab">
+          @for (c of r.chips; track c.w) {
+            <button type="button" class="chip" (click)="session.tapWord(c.w)">
+              <b>{{ c.w }}</b> {{ c.zh }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+  }
+  <p class="note">中文是機器翻譯，家長可以在「⚙️ 家長設定」裡打開修改。</p>
+  <p class="note">
+    單字真人發音來自 Free Dictionary API／Wikimedia Commons（CC BY／BY-SA
+    授權）；沒有錄音的字用合成語音。
+  </p>
+</div>
