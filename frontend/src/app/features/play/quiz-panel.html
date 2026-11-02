@@ -81,8 +81,11 @@
   <!-- 一直留在畫面上，回饋文字才會被螢幕閱讀器念出來 -->
   <p aria-live="polite">
     @if (q(); as q) {
-      @if (q.tries) {
-        <span class="retry">再想想 🤔</span>
+      <!-- 每答錯一次重建一次，螢幕閱讀器才會再念 -->
+      @for (t of [q.tries]; track t) {
+        @if (t) {
+          <span class="retry">再想想 🤔</span>
+        }
       }
     } @else {
       @if (s.finished()) {

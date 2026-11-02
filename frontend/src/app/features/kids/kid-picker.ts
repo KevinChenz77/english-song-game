@@ -32,7 +32,9 @@ export class KidPicker {
   }
 
   protected remove(k: Kid) {
-    if (confirm(`要刪除 ${k.name} 的存檔嗎？`)) this.store.remove(k.id);
+    if (!confirm(`要刪除 ${k.name} 的存檔嗎？`)) return;
+    this.store.remove(k.id);
+    if (!this.store.kids().length) this.managing.set(false); // 最後一位刪掉就離開管理模式
   }
 
   protected open() {

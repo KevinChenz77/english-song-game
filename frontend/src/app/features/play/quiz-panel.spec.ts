@@ -75,12 +75,13 @@ describe('QuizPanel', () => {
     expect(setMode).toHaveBeenCalledWith('quiz');
   });
 
-  it('難度卡顯示這首歌實際的題數（不是寫死 10／20）', async () => {
+  it('難度卡顯示實際出得出來的題數（不是寫死 10／20，也不是清單長度）', async () => {
     const { btn } = await setup();
+    // 兩句假歌詞：fox、boat 各只有一句，所以挑戰（18 個 fox）、最難（19 個 boat）都只出得了 1 題
     expect(btn('普通').textContent).toContain('2 題');
-    expect(btn('挑戰').textContent).toContain('18 題');
-    expect(btn('最難').textContent).toContain('19 題');
-    expect(btn('挑戰').textContent).not.toContain('20 題');
+    expect(btn('挑戰').textContent).toContain('1 題');
+    expect(btn('最難').textContent).toContain('1 題');
+    expect(btn('挑戰').textContent).not.toContain('18 題');
   });
 
   it('選擇題：中文提示；答錯停用＋答案提示；答對同步 play() 並顯示答對', async () => {

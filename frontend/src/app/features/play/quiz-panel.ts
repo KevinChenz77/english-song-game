@@ -9,18 +9,19 @@ import {
 } from '@angular/core';
 import { PlaySession } from '../../core/play-session';
 import { SongCatalog } from '../../core/song-catalog';
-import { Question } from '../../core/game/quiz';
+import { Question, pickQuestions } from '../../core/game/quiz';
 import { lookup, norm } from '../../core/game/text';
-import { QuizLevel, Song } from '../../core/models/song.model';
+import { LyricLine, QuizLevel, Song } from '../../core/models/song.model';
 
-/** 難度卡（icon、名稱、一行短說明）與結算的獎勵文字。題數用這首歌實際列的單字數。 */
+/** 難度卡（icon、名稱、一行短說明）與結算的獎勵文字。題數＝實際出得出來的題目數（找不到句子的字會被略過）。 */
 const LEVELS = (
   song: Song | null,
+  lines: LyricLine[],
 ): Record<
   QuizLevel,
   { icon: string; name: string; label: string; line: string; reward: string }
 > => {
-  const n = (l: QuizLevel) => song?.quiz?.[l]?.length ?? 0,
+  const n = (l: QuizLevel) => pickQuestions(lines, song?.quiz?.[l] ?? []).length,
     st = song?.sticker ?? '';
   return {
     normal: {
@@ -58,7 +59,7 @@ export class QuizPanel {
   private readonly catalog = inject(SongCatalog);
 
   protected readonly keys: QuizLevel[] = ['normal', 'hard', 'expert'];
-  protected readonly levels = computed(() => LEVELS(this.s.song()));
+  protected readonly levels = computed(() => LEVELS(this.s.song(), this.s.lines()));
   protected readonly level = computed(() => this.levels()[this.s.quizLevel()]);
   private readonly dict = computed(() => ({
     ...this.catalog.dict.value(),
