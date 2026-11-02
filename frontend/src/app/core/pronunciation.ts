@@ -1,48 +1,58 @@
 import { Service } from '@angular/core';
 import { load, save } from './storage';
+import { LANGS, Lang } from './lang';
+import { Token } from './models/song.model';
 
-// macOS / iOS 的第一個英文聲音常是 Albert、Bubbles 這類趣味機器人聲，要挑自然的
-const GOOD_VOICES =
-  /premium|enhanced|natural|neural|google us english|samantha|ava|allison|aria|jenny|zoe/i;
 const FUNNY_VOICES =
   /albert|bad news|bahh|bells|boing|bubbles|cellos|fred|good news|jester|junior|organ|ralph|superstar|trinoids|whisper|wobble|zarvox|grandma|grandpa|rocko|kathy/i;
 const SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
 
 /**
- * 單字真人發音：Free Dictionary API（Wikimedia Commons 錄音），查不到才用 speechSynthesis。
+ * 單字發音。有 dictAudio 的語言（en）：Free Dictionary API（Wikimedia Commons 錄音），查不到才用 speechSynthesis；
+ * 其他語言直接用該語言的 speechSynthesis 聲音，唸讀音（token 的 r）。
  * 快取 aud2 = { word: mp3網址 | '' }（'' = 查過沒有）；限流、伺服器錯誤、網路錯誤都不記，下次再查。
  */
 @Service()
 export class Pronunciation {
   private readonly aud = load<Record<string, string>>('aud2', {});
   private readonly audio = new Audio();
-  private voice: SpeechSynthesisVoice | null = null;
+  private readonly voices = new Map<string, SpeechSynthesisVoice>(); // 每個語言挑一次
 
   constructor() {
     try {
-      this.pickVoice();
-      speechSynthesis.onvoiceschanged = () => this.pickVoice();
+      speechSynthesis.onvoiceschanged = () => this.voices.clear();
     } catch {
       /* 沒有 speechSynthesis */
     }
-    // iOS 要在點擊當下先播過一次，之後非同步拿到網址才播得出來
+    // iOS 要在點擊當下先播過一次，之後非同步拿到網址、或不是點擊時（最難聽發音停下來）才播得出來
     document.addEventListener(
       'pointerdown',
       () => {
         this.audio.src = SILENT;
         this.audio.play().catch(() => {});
+        try {
+          speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+        } catch {
+          /* 沒有 speechSynthesis */
+        }
       },
       { once: true },
     );
   }
 
-  /** 唸一個字（norm 過的）。點擊時同步呼叫：快取裡有就當下播。 */
-  say(w: string): void {
-    if (Object.hasOwn(this.aud, w)) return this.playUrl(w, this.aud[w]);
-    void this.url(w).then((u) => this.playUrl(w, u));
+  /**
+   * 唸一個字（s 是 norm 過的）；L＝這個 token 的語言（tokLang），沒給＝英文。
+   * 點擊時同步呼叫：快取裡有、或直接 TTS 時當下就唸。
+   */
+  say(t: Token | string, L: Lang = LANGS['en']): void {
+    const tok = typeof t === 'string' ? { s: t } : t;
+    if (!L.dictAudio) return this.speak(tok.r ?? tok.s, L);
+    const w = tok.s;
+    if (Object.hasOwn(this.aud, w)) return this.playUrl(w, this.aud[w], L);
+    void this.url(w).then((u) => this.playUrl(w, u, L));
   }
 
-  /** 先慢慢查好發音（每 500ms 一個），避免被限流。 */
+  /** 先慢慢查好英文字典發音（每 500ms 一個），避免被限流。只傳 dictAudio 語言的字。 */
   prefetch(words: string[]): void {
     words.forEach((w, n) => setTimeout(() => void this.url(w), n * 500));
   }
@@ -111,36 +121,38 @@ export class Pronunciation {
     return url;
   }
 
-  private playUrl(w: string, url: string | null): void {
-    if (!url) return this.speak(w);
+  private playUrl(w: string, url: string | null, L: Lang): void {
+    if (!url) return this.speak(w, L);
     this.audio.src = url;
-    this.audio.play().catch(() => this.speak(w));
+    this.audio.play().catch(() => this.speak(w, L));
   }
 
-  private speak(text: string): void {
+  private speak(text: string, L: Lang): void {
     try {
       speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'en-US';
-      u.rate = 0.8;
-      if (this.voice) u.voice = this.voice;
+      u.lang = L.tts.lang;
+      u.rate = L.tts.rate;
+      const v = this.voice(L);
+      if (v) u.voice = v;
       speechSynthesis.speak(u);
     } catch {
       /* 沒有 speechSynthesis */
     }
   }
 
-  private pickVoice(): void {
-    const en = (v: SpeechSynthesisVoice) => v.lang.replace('_', '-');
+  /** 該語言的自然聲音：先找地區相同（en-US／ja-JP）且在 good 名單的，避開趣味聲音。找不到不快取（聲音清單可能還沒載入）。 */
+  private voice(L: Lang): SpeechSynthesisVoice | undefined {
+    const hit = this.voices.get(L.code);
+    if (hit) return hit;
+    const tag = (v: SpeechSynthesisVoice) => v.lang.replace('_', '-').toLowerCase();
     const vs = speechSynthesis
       .getVoices()
-      .filter((v) => en(v).startsWith('en') && !FUNNY_VOICES.test(v.name));
-    const us = vs.filter((v) => /en-US/i.test(en(v)));
-    this.voice =
-      us.find((v) => GOOD_VOICES.test(v.name)) ||
-      vs.find((v) => GOOD_VOICES.test(v.name)) ||
-      us[0] ||
-      vs[0] ||
-      null;
+      .filter((v) => tag(v).startsWith(L.code) && !FUNNY_VOICES.test(v.name));
+    const local = vs.filter((v) => tag(v) === L.tts.lang.toLowerCase());
+    const good = (v: SpeechSynthesisVoice) => L.tts.good.test(v.name);
+    const v = local.find(good) || vs.find(good) || local[0] || vs[0];
+    if (v) this.voices.set(L.code, v);
+    return v;
   }
 }

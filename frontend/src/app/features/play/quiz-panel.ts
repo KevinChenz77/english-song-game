@@ -11,8 +11,11 @@ import {
 import { PlaySession } from '../../core/play-session';
 import { Question, pickQuestions } from '../../core/game/quiz';
 import { lookup } from '../../core/game/text';
-import { Dicts, tokLang, wordLang } from '../../core/lang';
+import { Dicts, langOf, tokLang, wordLang } from '../../core/lang';
 import { LyricLine, QuizLevel, Song } from '../../core/models/song.model';
+
+/** 「最難」的玩法說明（依歌曲語言的 expert）。 */
+const EXPERT_HOW = { typed: '自己打字', listen: '聽發音選字' };
 
 /** 難度卡（icon、名稱、一行短說明）與結算的獎勵文字。題數＝實際出得出來的題目數（找不到句子的字會被略過）。 */
 const LEVELS = (
@@ -43,7 +46,7 @@ const LEVELS = (
       icon: '💎',
       name: '最難',
       label: '💎 最難',
-      line: `${n('expert')} 題・自己打字・🏅`,
+      line: `${n('expert')} 題・${EXPERT_HOW[langOf(song ?? {}).expert]}・🏅`,
       reward: '金色小卡',
     },
   };
@@ -62,6 +65,9 @@ export class QuizPanel {
 
   protected readonly keys: QuizLevel[] = ['normal', 'hard', 'expert'];
   protected readonly levels = computed(() => LEVELS(this.s.song(), this.s.lines()));
+  /** 最難＝聽發音選字（不打字、選項只有原文）。 */
+  protected readonly listen = computed(() => this.s.listenExpert());
+  protected readonly typed = computed(() => this.s.quizLevel() === 'expert' && !this.listen());
   protected readonly level = computed(() => this.levels()[this.s.quizLevel()]);
   protected readonly qs = computed(() => this.s.questions() as Question[]);
   protected readonly doneN = computed(() => this.qs().filter((q) => q.done).length);

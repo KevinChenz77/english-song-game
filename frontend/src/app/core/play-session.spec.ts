@@ -55,7 +55,7 @@ function setup() {
       { provide: SpeechRecognizer, useValue: { stop: () => {} } },
       {
         provide: Pronunciation,
-        useValue: { say: (w: string) => said.push(w), prefetch: () => {} },
+        useValue: { say: (t: { s: string }) => said.push(t.s), prefetch: () => {} },
       },
     ],
   });
