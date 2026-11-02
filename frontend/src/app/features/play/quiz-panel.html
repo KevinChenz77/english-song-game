@@ -1,0 +1,85 @@
+<div class="box">
+  <div>{{ label[s.quizLevel()] }}　第 {{ num() }} / {{ qs().length }} 題</div>
+  @if (q(); as q) {
+    <p>空格裡是哪個字？</p>
+    <div class="sent">
+      @for (tok of words(); track $index) {
+        @if ($index === q.k) {
+          <span class="blank" aria-label="空格">{{ tok }}</span>
+        } @else {
+          {{ tok }}
+        }
+        {{ ' ' }}
+      }
+    </div>
+    <div class="zhq">{{ s.translations()[s.lines()[q.i].text] }}</div>
+    @if (s.quizLevel() === 'expert') {
+      <p class="hint">
+        @if (q.tries >= 2) {
+          答案是「{{ q.w }}」，照著打一次
+        } @else {
+          {{ q.w[0] }} {{ blanks(q.w) }}（{{ q.w.length }} 個字母）{{ zh(q.w) }}
+        }
+      </p>
+      <input
+        #inp
+        class="typein"
+        [class.wrong]="q.tries > 0"
+        aria-label="打出空格裡的字"
+        placeholder="打出空格裡的字"
+        autocapitalize="off"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+        enterkeyhint="done"
+        (keydown.enter)="submit(q, inp)"
+      />
+      <button type="button" (click)="submit(q, inp)">確定</button>
+    } @else {
+      <div class="opts">
+        @for (w of q.opts; track w) {
+          <button
+            type="button"
+            [class.wrong]="wrong().has(w)"
+            [class.hint]="q.tries > 0 && w === q.w"
+            [disabled]="wrong().has(w)"
+            (click)="choose(q, w)"
+          >
+            <b>{{ w }}</b
+            ><small>{{ zh(w) }}</small>
+          </button>
+        }
+      </div>
+    }
+    <button type="button" class="ghost" (click)="again(q)">🔁 再聽一次</button>
+  } @else {
+    @if (!doneN() || s.finished()) {
+      <div class="modes">
+        @for (l of levels; track l) {
+          <button
+            type="button"
+            class="ghost"
+            [class.on]="s.quizLevel() === l"
+            [attr.aria-pressed]="s.quizLevel() === l"
+            (click)="setLevel(l)"
+          >
+            {{ label[l] }}（{{ desc(l) }}）
+          </button>
+        }
+      </div>
+    }
+    <p>
+      @if (s.finished()) {
+        {{ result() }}
+      } @else if (msg() && doneN()) {
+        {{ msg() }}
+      } @else if (s.makeup()) {
+        回去補答漏掉的題目 🔙
+      } @else if (doneN()) {
+        很好！繼續聽 🎧
+      } @else {
+        按 ▶ 播放，聽到空格那句時會停下來喔！
+      }
+    </p>
+  }
+</div>
