@@ -1,5 +1,6 @@
 <main class="shell">
   <router-outlet />
-  <!-- 第二波：(click) 開 <app-cloud-dialog>；外框再加 <app-celebration> -->
-  <div class="save"><button type="button" class="ghost">💾 存檔</button></div>
+  <div class="save"><button type="button" class="ghost" (click)="cloud.open('save')">💾 存檔</button></div>
 </main>
+<app-cloud-dialog />
+<app-celebration />

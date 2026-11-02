@@ -1,3 +1,49 @@
 <div class="bar"><button type="button" class="ghost" routerLink="/">← 回去</button></div>
 <h1>❓ 遊戲說明</h1>
-<p>（說明內容第二波實作）</p>
+
+<section class="help">
+  <h2>三種玩法</h2>
+  <ul>
+    <li><b>🎧 聽聽看</b>：跟著歌詞聽歌，點單字可以聽發音、看中文。</li>
+    <li>
+      <b>🧩 填填看</b>：唱到有空格的句子會停下來，選出或打出正確的單字。
+      <br />🙂 普通（10 題選擇）・🔥 挑戰（20 題選擇）・💎 最難（20 題自己打字）
+    </li>
+    <li>
+      <b>🎤 唱唱看</b>：聽完一句會停下來，換你唸或唱，唸對的字變綠色、沒唸對的字變橘色。
+      <br />🎯 練習前 8 句・🏆 挑戰整首
+    </li>
+  </ul>
+</section>
+
+<section class="help">
+  <h2>怎麼拿星星和貼紙</h2>
+  <p>
+    每首歌最多 <b>{{ maxStars }} 顆星星</b>。每首歌的每一項只能拿一次，拿到就不會不見。<br />
+    換一首歌，星星和貼紙可以再拿一次，貼紙會越收集越多！
+  </p>
+  <table>
+    <tr><th>怎麼拿到（每首歌）</th><th>星星</th><th>貼紙／特效</th></tr>
+    <tr><td>🎧 聽聽看：聽完一整首</td><td>⭐</td><td>—</td></tr>
+    <tr><td>🧩 填填看「普通」：全部一次答對</td><td>⭐</td><td>—</td></tr>
+    <tr><td>🧩 填填看「挑戰」：全部一次答對</td><td>⭐</td><td>這首歌的專屬貼紙@if (sample(); as s) {（例如 {{ s.sticker }}）}</td></tr>
+    <tr><td>🧩 填填看「最難」：全部一次打對</td><td>—</td><td>金色小卡 ✨</td></tr>
+    <tr><td>🎤 唱唱看「練習前 8 句」：唸完</td><td>—</td><td>🎤 麥克風貼紙</td></tr>
+    <tr><td>🎤 唱唱看「挑戰整首」：80% 的句子過關</td><td>⭐</td><td>👑 皇冠貼紙</td></tr>
+  </table>
+</section>
+
+<section class="help">
+  <h2>曲子小卡長這樣</h2>
+  @if (sample(); as s) {
+    <div class="grid">
+      @for (c of cards; track c.cap) {
+        <div>
+          <app-song-card [song]="s" [progress]="c.p" />
+          <div class="cap">{{ c.cap }}</div>
+        </div>
+      }
+    </div>
+  }
+  <p class="note">每首歌都有自己的小卡。☆ 是還沒拿到的星星；👑 代表唱唱看「挑戰整首」唱對 80% 以上。</p>
+</section>

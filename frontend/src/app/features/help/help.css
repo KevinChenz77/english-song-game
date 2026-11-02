@@ -1,0 +1,40 @@
+.help {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+.help h2 {
+  font-size: 20px;
+  margin: 4px 0 8px;
+}
+.help li {
+  margin: 8px 0;
+  line-height: 1.5;
+}
+.help table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 16px;
+}
+.help th,
+.help td {
+  border-bottom: 1px solid #eef4fa;
+  padding: 8px 6px;
+  text-align: left;
+}
+.help td:nth-child(2),
+.help th {
+  white-space: nowrap;
+}
+.help .grid {
+  grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+}
+app-song-card {
+  cursor: default;
+}
+.cap {
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 6px;
+}

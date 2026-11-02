@@ -1,0 +1,40 @@
+<dialog #dlg aria-labelledby="cloudT" (close)="closed()">
+  <form novalidate (submit)="submit($event)">
+    <h2 id="cloudT">{{ kind() === 'save' ? '💾 把進度存到雲端' : '📥 從雲端匯入進度' }}</h2>
+    <div [hidden]="done()">
+      <label>名字<input #nameEl [formField]="f.name" autocomplete="username" /></label>
+      <label>密碼<input #pwEl type="password" [formField]="f.password" autocomplete="current-password" /></label>
+    </div>
+    <p class="msg" role="status" [class.bad]="bad()">{{ msg() }}</p>
+    <button [hidden]="done()" [disabled]="busy()">{{ busy() ? '處理中…' : '確定' }}</button>
+    <button #closeEl type="button" class="ghost" (click)="close()">{{ done() ? '關閉' : '取消' }}</button>
+  </form>
+</dialog>
+
+<dialog #askDlg aria-labelledby="askT" (close)="asked()">
+  <form method="dialog">
+    @if (asking(); as a) {
+      <h2 id="askT">這台裝置已經有「{{ a.mine.name }}」了，要用哪一份進度？</h2>
+    }
+    @if (compare(); as c) {
+      <div class="cmp">
+        <div>
+          <b>☁️ 雲端的進度</b>
+          @for (s of c.cloud.songs; track $index) {
+            <div>{{ s }}</div>
+          }
+          <div>貼紙：{{ c.cloud.stickers }}</div>
+        </div>
+        <div>
+          <b>📱 這台的進度</b>
+          @for (s of c.here.songs; track $index) {
+            <div>{{ s }}</div>
+          }
+          <div>貼紙：{{ c.here.stickers }}</div>
+        </div>
+      </div>
+    }
+    <button value="cloud">用雲端的</button>
+    <button class="ghost" value="keep" autofocus>保留這台</button>
+  </form>
+</dialog>
