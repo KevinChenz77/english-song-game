@@ -18,6 +18,7 @@ import { Api } from '../../core/api';
 import { KidsStore } from '../../core/kids-store';
 import { PlaySession } from '../../core/play-session';
 import { SongCatalog } from '../../core/song-catalog';
+import { Sfx } from '../../core/sfx';
 import { YoutubePlayer } from '../../core/youtube-player';
 import { starStr } from '../../core/game/reward-rules';
 import { PlayMode, Song } from '../../core/models/song.model';
@@ -41,6 +42,7 @@ export class Play {
   private readonly catalog = inject(SongCatalog);
   protected readonly session = inject(PlaySession);
   protected readonly player = inject(YoutubePlayer);
+  protected readonly sfx = inject(Sfx);
   private readonly yt = viewChild.required<ElementRef<HTMLElement>>('yt');
   private createdFor: string | null = null; // 已建立播放器的 song.id（同一個 Play 換歌時重建）
 
