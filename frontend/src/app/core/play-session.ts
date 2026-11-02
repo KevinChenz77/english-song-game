@@ -134,6 +134,8 @@ export class PlaySession {
     const n = this.questions().findIndex((q) => !q.done && t >= q.endT - 0.15 && t < q.endT + 1.5);
     if (n >= 0) {
       if (this.player.playing()) this.player.pause();
+      // 最難聽發音：剛停下來時唸一次答案（不是點擊，iOS 可能擋；畫面有「🔊 再聽一次」）
+      if (this.active() !== n && this.listenExpert()) this.sayAnswer(this.quizQs()[n]);
       this.active.set(n);
     }
     if (t > lines[lines.length - 1].end && !this.finished()) this.finish();
@@ -148,7 +150,13 @@ export class PlaySession {
     if (m === 'quiz' && song) {
       const qs = pickQuestions(lines, song.quiz[this.quizLevel()], song);
       this.questions.set(qs);
-      this.pron.prefetch(qs.slice(0, 8).map((q) => q.w)); // 先慢慢查好答案的發音
+      // 先慢慢查好答案的字典發音（只有 dictAudio 的語言）
+      this.pron.prefetch(
+        qs
+          .filter((q) => tokLang(q.tok, song).dictAudio)
+          .slice(0, 8)
+          .map((q) => q.w),
+      );
     } else if (m === 'sing') {
       this.questions.set(
         (this.singAll() ? lines : lines.slice(0, 8)).map((l, i) => ({
@@ -200,8 +208,9 @@ export class PlaySession {
     const w = tokLang(t, this.song() ?? {}).norm(t.s);
     if (!w) return;
     if (this.mode() === 'listen' && this.player.playing()) this.player.pause();
-    this.pron.say(w);
-    this._popWord.set({ ...t, s: w });
+    const p = { ...t, s: w };
+    this.pron.say(p, tokLang(t, this.song() ?? {}));
+    this._popWord.set(p);
     this.holdPop(false);
   }
 
@@ -236,12 +245,26 @@ export class PlaySession {
     this.active.set(null);
     const last = !qs.some((x) => !x.done);
     if (!last) this.sfx.correct(); // 最後一題會接慶祝音效，不要疊在一起
-    this.pron.say(q.w); // 答對唸一次單字，和舊版一樣
+    this.sayAnswer(q); // 答對唸一次單字，和舊版一樣
     // 在點擊當下就播放，iOS 才不會擋
     const left = qs.find((x) => !x.done);
     if (!this.makeup()) this.player.play();
     else if (left) this.jumpTo(left);
     else this.finishQuiz();
+  }
+
+  /** 填填看「最難」而且這首歌的最難是聽發音選字（langOf(song).expert === 'listen'）。 */
+  listenExpert(): boolean {
+    return (
+      this.mode() === 'quiz' &&
+      this.quizLevel() === 'expert' &&
+      langOf(this.song() ?? {}).expert === 'listen'
+    );
+  }
+
+  /** 唸題目的答案（照 token 自己的語言：日文唸讀音、日文歌裡的英文字照英文）。「🔊 再聽一次」點擊時同步呼叫。 */
+  sayAnswer(q: Question): void {
+    this.pron.say({ ...q.tok, s: q.w }, tokLang(q.tok, this.song() ?? {}));
   }
 
   private quizQs(): Question[] {

@@ -17,7 +17,7 @@
       }
     </div>
     <div class="zhq">{{ s.translations()[s.lines()[q.i].text] }}</div>
-    @if (s.quizLevel() === 'expert') {
+    @if (typed()) {
       <p class="hint">
         @if (q.tries >= 2) {
           答案是「{{ q.w }}」，照著打一次
@@ -43,6 +43,10 @@
         <button type="button" (click)="submit(q, inp)">確定</button>
       }
     } @else {
+      @if (listen()) {
+        <!-- 點擊當下同步唸（iOS 擋掉停下來時的自動發音就靠它） -->
+        <button type="button" class="hear" aria-label="再聽一次這個字" (click)="s.sayAnswer(q)">🔊 再聽一次</button>
+      }
       <div class="opts">
         @for (w of q.opts; track w) {
           <button
@@ -52,8 +56,11 @@
             [disabled]="wrong().has(w)"
             (click)="choose(q, w)"
           >
-            <b>{{ w }}</b
-            ><small>{{ zh(w) }}</small>
+            <b>{{ w }}</b>
+            <!-- 聽發音選字：選項只有原文，沒有中文 -->
+            @if (!listen()) {
+              <small>{{ zh(w) }}</small>
+            }
           </button>
         }
       </div>

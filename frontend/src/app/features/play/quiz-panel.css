@@ -215,3 +215,12 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* 最難聽發音選字：大大的重播按鈕 */
+.hear {
+  display: block;
+  margin: var(--sp-3) auto 0;
+  min-height: var(--tap-kid); /* 64px */
+  min-width: 200px;
+  font-size: var(--fs-lg);
+}

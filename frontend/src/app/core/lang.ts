@@ -15,6 +15,8 @@ export interface Lang {
   expert: 'typed' | 'listen'; // 填填看「最難」的玩法
   quizRange: Record<QuizLevel, [number, number]>; // 每個難度的題目字數
   units(t: Token): number; // 卡拉 OK 權重：en 音節、ja 音拍
+  dictAudio: boolean; // Free Dictionary 真人錄音（只有英文）
+  tts: { lang: string; good: RegExp; rate: number }; // speechSynthesis：語言、好聽的聲音名單、速度
 }
 
 const SMALL_KANA = /[ゃゅょぁぃぅぇぉゎ]/;
@@ -45,6 +47,13 @@ export const LANGS: Record<string, Lang> = {
     expert: 'typed',
     quizRange: { normal: [10, 10], hard: [18, 20], expert: [18, 20] },
     // ponytail：母音群數粗估音節（字尾單獨的 e 不算），夠用來分配時間
+    dictAudio: true,
+    // macOS / iOS 的第一個英文聲音常是 Albert、Bubbles 這類趣味機器人聲，要挑自然的
+    tts: {
+      lang: 'en-US',
+      good: /premium|enhanced|natural|neural|google us english|samantha|ava|allison|aria|jenny|zoe/i,
+      rate: 0.8,
+    },
     units: (t) => Math.max(1, (norm(t.s).replace(/([^aeiouy])e$/, '$1').match(/[aeiouy]+/g) ?? []).length),
   },
   ja: {
@@ -60,6 +69,8 @@ export const LANGS: Record<string, Lang> = {
     forms: (w) => [w],
     expert: 'listen',
     quizRange: { normal: [6, 10], hard: [10, 20], expert: [10, 20] },
+    dictAudio: false,
+    tts: { lang: 'ja-JP', good: /kyoko|o-ren|otoya|hattori|premium|enhanced|nanami|google 日本語/i, rate: 0.8 },
     // 音拍：讀音的假名數，小寫的ゃゅょぁぃぅぇぉ不算（っ、ー、ん算一拍）
     units: (t) => Math.max(1, [...jaNorm(t.r ?? t.s)].filter((c) => !SMALL_KANA.test(c)).length),
   },

@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { PlaySession } from './play-session';
 import { YoutubePlayer } from './youtube-player';
 import { Rewards } from './rewards';
+import { Pronunciation } from './pronunciation';
 import { Question } from './game/quiz';
 import { parseLrc } from './game/lrc';
 import { tokenize } from './lang';
@@ -115,5 +116,31 @@ describe('PlaySession 填填看', () => {
     }
     b.s.finish();
     expect(b.rewards.earn).toHaveBeenCalledWith(1, b.s.song(), 'expert');
+  });
+
+  it('最難聽發音（ja）：停下來時唸一次答案（之後的 tick 不重唸）；英文最難不唸', () => {
+    const say = vi.fn();
+    TestBed.configureTestingModule({
+      providers: [{ provide: Pronunciation, useValue: { say, prefetch: vi.fn() } }],
+    });
+    const { s, player } = setup('expert');
+    Object.assign(player, { playing: () => true });
+    s.song.set({ id: 'jademo', lang: 'ja', sticker: '🌸' } as Song);
+    s.questions.set([{ ...q(0, '猫'), tok: { s: '猫', r: 'ねこ' } }]);
+    const t = lines[0].end - 0.1 + 1; // 句尾前 0.1 秒（offset 1）
+    s.onTick(t);
+    s.onTick(t + 0.1);
+    expect(s.active()).toBe(0);
+    expect(say).toHaveBeenCalledTimes(1);
+    expect(say.mock.calls[0][0]).toEqual({ s: '猫', r: 'ねこ' });
+    expect(say.mock.calls[0][1].code).toBe('ja');
+
+    say.mockClear();
+    s.song.set({ id: 'demo', sticker: '❄️' } as Song);
+    s.questions.set([q(0, 'fox')]);
+    s.active.set(null);
+    s.onTick(t);
+    expect(s.active()).toBe(0);
+    expect(say).not.toHaveBeenCalled();
   });
 });

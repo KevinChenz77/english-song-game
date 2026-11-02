@@ -7,6 +7,7 @@ import { parseLrc } from '../../core/game/lrc';
 import { tokenize } from '../../core/lang';
 import { Question } from '../../core/game/quiz';
 import { Song } from '../../core/models/song.model';
+import { Pronunciation } from '../../core/pronunciation';
 
 // 假句子（不放真實歌詞）
 const lines = tokenize(parseLrc('[00:01] red fox runs\n[00:03] the big blue boat'), {});
@@ -132,5 +133,98 @@ describe('QuizPanel', () => {
     await f.whenStable();
     expect(el.textContent).toContain('🙂 普通：一次就答對 1 / 2 題，全部答對可以拿到一顆星星喔！');
     expect(el.querySelector('.modes')).not.toBeNull();
+  });
+
+  it('英文最難：難度卡寫「自己打字」', async () => {
+    const { btn } = await setup();
+    expect(btn('最難').textContent).toContain('自己打字');
+  });
+});
+
+describe('QuizPanel 最難聽發音選字（ja）', () => {
+  // 自編的日文句子（不是歌詞）
+  const ja = tokenize(parseLrc('[00:01] しろい 猫 が いる\n[00:03] happy な いぬ'), { lang: 'ja' });
+  const tok = { s: '猫', r: 'ねこ' };
+
+  async function setupJa() {
+    const player = { play: vi.fn(), pause: vi.fn(), seek: vi.fn() };
+    const earn = vi.fn();
+    const say = vi.fn();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: YoutubePlayer, useValue: player },
+        { provide: Rewards, useValue: { earn } },
+        { provide: Pronunciation, useValue: { say, prefetch: vi.fn() } },
+      ],
+    });
+    const s = TestBed.inject(PlaySession);
+    const quiz = { normal: ['いぬ'], hard: ['いぬ'], expert: ['いぬ'] };
+    s.kidId.set(1);
+    s.song.set({ id: 'jademo', lang: 'ja', sticker: '🌸', quiz } as unknown as Song);
+    s.lines.set(ja);
+    s.translations.set({ [ja[0].text]: '有一隻白貓' });
+    s.mode.set('quiz');
+    s.quizLevel.set('expert');
+    s.questions.set([
+      { ...q(0, 1, '猫', ['猫', 'いぬ', 'とり']), tok, endT: ja[0].end },
+      { ...q(1, 0, 'happy', ['happy', 'いぬ', '猫']), tok: { s: 'happy', l: 'en' }, endT: ja[1].end },
+    ]);
+    const f = TestBed.createComponent(QuizPanel);
+    f.componentRef.setInput('dicts', { ja: { 猫: '貓', いぬ: '狗', とり: '鳥' }, en: { happy: '快樂' } });
+    await f.whenStable();
+    const el: HTMLElement = f.nativeElement;
+    const btn = (t: string) =>
+      [...el.querySelectorAll('button')].find((b) => b.textContent!.includes(t))!;
+    return { s, f, el, btn, say, earn, player };
+  }
+
+  it('難度卡寫「聽發音選字」，不寫打字', async () => {
+    const { btn } = await setupJa();
+    expect(btn('最難').textContent).toContain('聽發音選字');
+    expect(btn('最難').textContent).not.toContain('打字');
+  });
+
+  it('沒有輸入框；選項只有原文（沒有中文、沒有讀音）；整句中文照常顯示', async () => {
+    const { s, f, el, btn } = await setupJa();
+    s.active.set(0);
+    await f.whenStable();
+    expect(el.querySelector('input')).toBeNull();
+    expect(el.querySelector('.hint')).toBeNull();
+    expect(el.querySelector('.opts small, .opts rt')).toBeNull();
+    expect(btn('とり').textContent!.trim()).toBe('とり');
+    expect(el.querySelector('.zhq')!.textContent).toContain('有一隻白貓');
+  });
+
+  it('🔊 再聽一次：點擊當下同步唸，日文 token 用 ja', async () => {
+    const { s, f, btn, say } = await setupJa();
+    s.active.set(0);
+    await f.whenStable();
+    const hear = btn('🔊');
+    expect(hear.textContent).toContain('再聽一次');
+    hear.click();
+    expect(say).toHaveBeenCalledTimes(1); // 同一個 click 裡，沒有等 Promise
+    expect(say.mock.calls[0][0]).toEqual({ s: '猫', r: 'ねこ' });
+    expect(say.mock.calls[0][1].code).toBe('ja');
+  });
+
+  it('日文歌裡的英文 token：🔊 走英文', async () => {
+    const { s, f, btn, say } = await setupJa();
+    s.active.set(1);
+    await f.whenStable();
+    btn('🔊').click();
+    expect(say.mock.calls[0][1].code).toBe('en');
+  });
+
+  it('全部一次答對 → earn(expert)', async () => {
+    const { s, f, btn, earn, player } = await setupJa();
+    s.active.set(0);
+    await f.whenStable();
+    btn('猫').click();
+    expect(player.play).toHaveBeenCalledTimes(1);
+    s.active.set(1);
+    await f.whenStable();
+    btn('happy').click();
+    s.finish(); // 影片播完
+    expect(earn).toHaveBeenCalledWith(1, s.song(), 'expert');
   });
 });
