@@ -103,7 +103,7 @@ export class Play {
       const s = this.song.value(),
         c = this.content.value(),
         kidId = this.kidId();
-      untracked(() => this.session.open(kidId, s, c.lines, c.translations));
+      untracked(() => this.session.open(kidId, s, c.lines, c.translations, c.tokens));
     });
     // 這個元件自己的資料都到了（上面的 effect 已先 open()）才建立播放器，每首歌一次。
     // 所以 open()/setMode() 都發生在播放器 ready 之前，不會打斷已經按下的 ▶。

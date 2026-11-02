@@ -64,6 +64,10 @@ select,
 input {
   font: inherit;
 }
+/* 日文：用日文字形顯示漢字（少了 lang="ja" 會用繁中字形）；只用系統內建字型，不載網路字型 */
+:lang(ja) {
+  font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Noto Sans JP', system-ui, sans-serif;
+}
 button {
   cursor: pointer;
   border: 0;

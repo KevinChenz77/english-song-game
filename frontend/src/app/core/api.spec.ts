@@ -69,6 +69,27 @@ describe('Api', () => {
     expect(c.translations).toEqual({ a: '甲', b: '家長改的' });
   });
 
+  it('content：後端 tokens 陣列 → Token（null 省略、壞的丟掉）；沒有 tokens 欄位 → undefined', async () => {
+    // 自編的字（不是歌詞）
+    const p = api.content('j');
+    http.expectOne(`${BASE}/api/songs/j/content`).flush({
+      ok: true,
+      lrc: '[00:01.00] 山へhappy',
+      translations: {},
+      tokens: {
+        '山へhappy': [['山', 'やま', 'yama'], ['へ', null, 'e'], ['happy', null, null, 'en'], [null], 'x', ['go', null, null, 'zz']],
+        bad: 'x',
+        empty: [],
+      },
+    });
+    expect((await p).tokens).toEqual({
+      '山へhappy': [{ s: '山', r: 'やま', ro: 'yama' }, { s: 'へ', ro: 'e' }, { s: 'happy', l: 'en' }, { s: 'go' }],
+    });
+    const p2 = api.content('e');
+    http.expectOne(`${BASE}/api/songs/e/content`).flush({ ok: true, lrc: '[00:01.00] a', translations: {} });
+    expect((await p2).tokens).toBeUndefined();
+  });
+
   it('content 404 → 還沒準備好；其他錯誤 → 抓不到', async () => {
     const p1 = api.content('x');
     http.expectOne(`${BASE}/api/songs/x/content`).flush({ ok: false }, { status: 404, statusText: 'x' });

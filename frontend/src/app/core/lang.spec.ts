@@ -67,3 +67,23 @@ describe('LANGS / tokLang', () => {
     expect(LANGS['ja'].units({ s: 'ラーメン' })).toBe(4);
   });
 });
+
+describe('tokenize', () => {
+  // 自編的句子（不是歌詞）
+  const lines = [
+    { t: 1, end: 2, text: '山へ' },
+    { t: 2, end: 3, text: 'ねこ' },
+  ];
+
+  it('有後端 tokens 的句子用它，沒有的句子用 split', () => {
+    const out = tokenize(lines, { lang: 'ja' }, { '山へ': [{ s: '山', r: 'やま', ro: 'yama' }, { s: 'へ', ro: 'e' }] });
+    expect(out[0].tokens).toEqual([{ s: '山', r: 'やま', ro: 'yama' }, { s: 'へ', ro: 'e' }]);
+    expect(out[1].tokens).toEqual(LANGS['ja'].split('ねこ'));
+  });
+
+  it('英文：沒有後端 tokens＝空白切（不變）', () => {
+    const en = [{ t: 1, end: 2, text: 'red fox runs' }];
+    expect(tokenize(en, {}, undefined)[0].tokens).toEqual([{ s: 'red' }, { s: 'fox' }, { s: 'runs' }]);
+    expect(tokenize(en, {}, {})[0].tokens).toEqual([{ s: 'red' }, { s: 'fox' }, { s: 'runs' }]);
+  });
+});

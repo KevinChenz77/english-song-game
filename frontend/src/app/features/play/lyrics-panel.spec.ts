@@ -5,6 +5,8 @@ import { YoutubePlayer } from '../../core/youtube-player';
 import { Rewards } from '../../core/rewards';
 import { parseLrc } from '../../core/game/lrc';
 import { tokenize } from '../../core/lang';
+import { Reading } from '../../core/reading';
+import { LyricLine, Song } from '../../core/models/song.model';
 
 // 假句子（不放真實歌詞）
 const lines = tokenize(parseLrc('[00:01] red fox runs\n[00:03] the big blue boat'), {});
@@ -53,5 +55,73 @@ describe('LyricsPanel', () => {
     const empty = el.querySelectorAll('button.zh.empty');
     expect(empty.length).toBe(1);
     expect(empty[0].textContent).toContain('＋ 填翻譯');
+  });
+
+  it('英文歌：沒有 ruby、沒有讀音按鈕、字間保留空白', async () => {
+    const { el } = await setup();
+    expect(el.querySelector('ruby')).toBeNull();
+    expect(el.querySelector('button.reading')).toBeNull();
+    expect(el.querySelector('[data-line="0"] .en')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      '▶ red fox runs',
+    );
+  });
+});
+
+describe('LyricsPanel 日文讀音', () => {
+  // 自編的句子（不是歌詞）：漢字有平假名讀音、假名只有羅馬拼音、英文 token 標 l
+  const ja: LyricLine[] = [
+    {
+      t: 1,
+      end: 4,
+      text: '山へ go',
+      tokens: [
+        { s: '山', r: 'やま', ro: 'yama' },
+        { s: 'へ', ro: 'e' },
+        { s: 'go', l: 'en' },
+      ],
+    },
+  ];
+
+  async function setupJa() {
+    localStorage.removeItem('reading');
+    const r = await setup();
+    r.s.song.set({ id: 'x', lang: 'ja' } as Song);
+    r.s.lines.set(ja);
+    await r.f.whenStable();
+    const rts = () => [...r.el.querySelectorAll('rt')].map((x) => x.textContent);
+    const toggle = r.el.querySelector<HTMLButtonElement>('button.reading')!;
+    return { ...r, rts, toggle };
+  }
+  afterEach(() => localStorage.removeItem('reading'));
+
+  it('預設平假名：只有漢字有 ruby；羅馬拼音：日文 token 都有；關：沒有；英文 token 永遠沒有', async () => {
+    const { f, el, rts, toggle } = await setupJa();
+    expect(el.querySelector('.en')?.getAttribute('lang')).toBe('ja');
+    expect(el.querySelectorAll('button.w')[2].getAttribute('lang')).toBe('en');
+    expect(el.querySelector('.en')?.textContent).toContain('山やまへgo'); // token 之間不插空白
+    expect(rts()).toEqual(['やま']);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+
+    toggle.click();
+    await f.whenStable();
+    expect(rts()).toEqual(['yama', 'e']);
+
+    toggle.click();
+    await f.whenStable();
+    expect(rts()).toEqual([]);
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+
+    toggle.click();
+    await f.whenStable();
+    expect(rts()).toEqual(['やま']);
+  });
+
+  it('切換存在 localStorage reading（每台裝置記住）', async () => {
+    const { f, toggle } = await setupJa();
+    toggle.click();
+    await f.whenStable();
+    expect(localStorage.getItem('reading')).toBe('"romaji"');
+    TestBed.resetTestingModule();
+    expect(TestBed.inject(Reading).mode()).toBe('romaji');
   });
 });

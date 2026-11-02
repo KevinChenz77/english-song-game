@@ -4,6 +4,7 @@ import { Pronunciation } from '../../core/pronunciation';
 import { lookup } from '../../core/game/text';
 import { Dicts, tokLang } from '../../core/lang';
 import { Token } from '../../core/models/song.model';
+import { Reading } from '../../core/reading';
 
 /** 點單字的小視窗（PlaySession.tapWord 打開，6 秒自動關；碰著／鍵盤焦點在上面時不關；🔊 重播）。 */
 @Component({
@@ -19,11 +20,16 @@ import { Token } from '../../core/models/song.model';
         (focusin)="hold(over, isKbd($event.target))"
         (focusout)="hold(over, pop.contains(next($event)))"
       >
+        @let L = lang(t);
+        @let rt = reading.of(t, L);
         <div class="txt">
-          <b>{{ t.s }}</b>
+          @if (rt) {
+            <small [attr.lang]="reading.mode() === 'hira' ? L.code : null">{{ rt }}</small>
+          }
+          <b [attr.lang]="L.code">{{ t.s }}</b>
           <span>{{ zh(t) || '（還沒有中文解釋）' }}</span>
         </div>
-        <button type="button" class="say" aria-label="再聽一次" (click)="pron.say(t.s)">🔊</button>
+        <button type="button" class="say" aria-label="再聽一次" (click)="pron.say(t, L)">🔊</button>
         <button type="button" class="ghost" aria-label="關閉" (click)="session.closePop()">✕</button>
       </div>
     }
@@ -52,6 +58,11 @@ import { Token } from '../../core/models/song.model';
       flex: 1;
       min-width: 8em;
     }
+    small {
+      display: block;
+      font-size: 16px;
+      line-height: 1.2;
+    }
     b {
       display: block;
       font-size: 26px;
@@ -77,15 +88,20 @@ export class WordPop {
   readonly dicts = input.required<Dicts>();
   protected readonly session = inject(PlaySession);
   protected readonly pron = inject(Pronunciation);
+  protected readonly reading = inject(Reading);
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.session.closePop()); // 離開遊玩畫面時關掉，避免停住的計時
   }
 
-  /** t.s 已 norm 過（PlaySession.tapWord）。 */
+  protected lang(t: Token) {
+    return tokLang(t, this.session.song() ?? {});
+  }
+
+  /** 查這個 token 自己語言的字典（norm 是冪等的；PlaySession.tapWord 已 norm 過也沒關係）。 */
   protected zh(t: Token) {
-    const L = tokLang(t, this.session.song() ?? {});
-    return lookup(t.s, this.dicts()[L.code] ?? {}, L.forms);
+    const L = this.lang(t);
+    return lookup(L.norm(t.s), this.dicts()[L.code] ?? {}, L.forms);
   }
 
   /** 手指／滑鼠在上面，或鍵盤焦點（:focus-visible；點按鈕得到的焦點不算，免得點過 🔊 就永遠不關）。 */

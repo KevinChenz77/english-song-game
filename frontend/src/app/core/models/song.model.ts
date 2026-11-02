@@ -49,4 +49,5 @@ export interface LyricLine extends LrcLine {
 export interface SongContent {
   lines: LrcLine[];
   translations: Record<string, string>;
+  tokens?: Record<string, Token[]>; // 後端預先算好的斷詞＋讀音（以去掉逐字時間的原句當 key）；沒有就前端 split
 }
