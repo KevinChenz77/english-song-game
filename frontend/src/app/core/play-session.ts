@@ -5,6 +5,13 @@ import { SpeechRecognizer } from './speech-recognizer';
 import { LyricLine, PlayMode, QuizLevel, Song } from './models/song.model';
 import { Question } from './game/quiz';
 import { ScoredWord } from './game/scoring';
+import { RewardKey } from './models/kid.model';
+
+const QUIZ_REWARD: Record<QuizLevel, RewardKey> = {
+  normal: 'quizNormal',
+  hard: 'quizHard',
+  expert: 'expert',
+};
 
 /** 唱唱看的一句。 */
 export interface SingStop {
@@ -100,8 +107,32 @@ export class PlaySession {
 
   /** 填填看作答（A）。點擊／Enter 時同步呼叫，答對後同步 player.play()。 */
   answer(word: string): void {
-    void word;
-    throw new Error('TODO wave 2 (A): PlaySession.answer');
+    const n = this.active();
+    const q = n === null ? undefined : this.quizQs()[n];
+    if (n === null || !q || q.done) return;
+    if (word !== q.w) {
+      this.questions.set(this.quizQs().map((x, k) => (k === n ? { ...x, tries: x.tries + 1 } : x)));
+      return;
+    }
+    const qs = this.quizQs().map((x, k) => (k === n ? { ...x, done: true } : x));
+    this.questions.set(qs);
+    this.active.set(null);
+    // TODO(E/Pronunciation): say(q.w) synchronously here
+    // 在點擊當下就播放，iOS 才不會擋
+    const left = qs.find((x) => !x.done);
+    if (!this.makeup()) this.player.play();
+    else if (left) this.jumpTo(left);
+    else this.finishQuiz();
+  }
+
+  private quizQs(): Question[] {
+    return this.mode() === 'quiz' ? (this.questions() as Question[]) : [];
+  }
+
+  /** 跳回某題那句的開頭（補答、🔁 再聽一次），點擊時同步呼叫，同步 play()。 */
+  jumpTo(q: Question): void {
+    this.player.seek(this.lines()[q.i].t + this.offset() - 0.3);
+    this.player.play();
   }
 
   /** 結算，影片結束時也會呼叫。分派到 finishQuiz（A）／finishSing（D），兩人各改各的，不碰這個方法。 */
@@ -114,7 +145,22 @@ export class PlaySession {
 
   /** 填填看結算（A）：該難度全一次答對才 earn。 */
   private finishQuiz(): void {
-    throw new Error('TODO wave 2 (A): PlaySession.finishQuiz');
+    const qs = this.quizQs();
+    if (!qs.length || this.finished()) return;
+    const left = qs.find((q) => !q.done);
+    if (left) {
+      // 拖進度條跳過的題目，最後回去補問
+      if (!this.makeup()) {
+        this.makeup.set(true);
+        this.jumpTo(left);
+      }
+      return;
+    }
+    this.finished.set(true);
+    const kidId = this.kidId(),
+      song = this.song();
+    if (kidId === null || !song || qs.some((q) => q.tries)) return;
+    this.rewards.earn(kidId, song, QUIZ_REWARD[this.quizLevel()]);
   }
 
   /** 唱唱看結算（D）：練習 🎤、挑戰 80% ⭐＋👑，寫 singSummary。 */
