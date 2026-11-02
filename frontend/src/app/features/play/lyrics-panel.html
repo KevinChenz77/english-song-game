@@ -29,7 +29,14 @@
         [class.unspaced]="!lang().spaced"
       >
         @if (session.mode() === 'listen') {
-          <button type="button" class="seek" [class.on]="now" aria-label="從這句開始播" (click)="seek(r.l.t)">
+          <button
+            type="button"
+            class="seek"
+            lang="zh-Hant"
+            [class.on]="now"
+            aria-label="從這句開始播"
+            (click)="seek(r.l.t)"
+          >
             ▶
           </button>
         }

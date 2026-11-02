@@ -24,25 +24,32 @@ export const cloudMessage = (kind: 'save' | 'load', status: number) => MSG[kind]
 
 const status = (e: unknown) => (e instanceof HttpErrorResponse ? e.status : 0);
 
-const str = (v: unknown) => (typeof v === 'string' && v ? v : undefined);
+const MAX = 64; // 一個 token 的 s／r／ro 最長字數，再長就當壞掉
+const str = (v: unknown) => (typeof v === 'string' && v && v.length <= MAX ? v : undefined);
 
-/** 後端 tokens：{ 原句: [[s, r?, ro?, l?], ...] }（後面的 null 省略）→ Token；壞掉的 token／不認得的語言丟掉，空的句子不放（前端自己 split）。 */
+/**
+ * 後端 tokens：{ 原句: [[s, r?, ro?, l?], ...] }（後面的 null 省略）→ Token。不可信的資料：
+ * 一句裡只要有一個 token 壞掉、或 s 接起來對不上原句（去空白比），整句不放（前端自己 split）；空的句子也不放。
+ */
 function toTokens(raw: unknown): Record<string, Token[]> | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
-  const out: Record<string, Token[]> = {};
+  const out: Record<string, Token[]> = Object.create(null);
+  const bad = (x: unknown) => x != null && !str(x); // 有給但不是合格字串
   for (const [line, arr] of Object.entries(raw)) {
-    if (!Array.isArray(arr)) continue;
-    const toks = arr.flatMap((a): Token[] => {
+    if (!Array.isArray(arr) || !arr.length) continue;
+    const toks: Token[] = [];
+    for (const a of arr) {
       const s = Array.isArray(a) ? str(a[0]) : undefined;
-      if (!s) return [];
+      if (!s || bad(a[1]) || bad(a[2]) || bad(a[3])) break;
       const t: Token = { s };
       const r = str(a[1]), ro = str(a[2]), l = str(a[3]);
       if (r) t.r = r;
       if (ro) t.ro = ro;
-      if (l && l in LANGS) t.l = l;
-      return [t];
-    });
-    if (toks.length) out[line] = toks;
+      if (l && Object.hasOwn(LANGS, l)) t.l = l; // 不認得的語言只丟 l
+      toks.push(t);
+    }
+    if (toks.length === arr.length && toks.map((t) => t.s).join('') === line.replace(/\s+/g, ''))
+      out[line] = toks;
   }
   return out;
 }

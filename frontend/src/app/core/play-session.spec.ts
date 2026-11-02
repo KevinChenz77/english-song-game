@@ -185,6 +185,14 @@ describe('PlaySession', () => {
     vi.useRealTimers();
   });
 
+  it('tapWord（ja）：小視窗顯示原本的片假名（只去標點），發音也用它', () => {
+    const { s, said } = setup();
+    s.song.set({ ...song, lang: 'ja' });
+    s.tapWord({ s: 'ネコ！' }); // 自編的字
+    expect(s.popWord()).toEqual({ s: 'ネコ' });
+    expect(said).toEqual(['ネコ']);
+  });
+
   it('holdPop：碰著小視窗就不自動關，離開後再等 6 秒', () => {
     vi.useFakeTimers();
     const { s } = setup();

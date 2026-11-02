@@ -9,10 +9,12 @@ const NEXT: Record<ReadingMode, ReadingMode> = { hira: 'romaji', romaji: 'off', 
 /** 讀音輔助（ruby）：平假名 → 羅馬拼音 → 關，預設平假名，每台裝置記住（localStorage `reading`）。 */
 @Service()
 export class Reading {
-  readonly mode = signal<ReadingMode>(load<ReadingMode>('reading', 'hira'));
+  // 存檔被改壞（不是三種之一）就回到平假名
+  private readonly saved = load<ReadingMode>('reading', 'hira');
+  readonly mode = signal<ReadingMode>(Object.hasOwn(NEXT, this.saved) ? this.saved : 'hira');
 
   next(): void {
-    this.mode.update((m) => NEXT[m] ?? 'hira'); // 存檔被改壞也回到平假名
+    this.mode.update((m) => NEXT[m]);
     save('reading', this.mode());
   }
 

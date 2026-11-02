@@ -76,6 +76,18 @@ export class QuizPanel {
     const n = this.s.active();
     return n === null ? null : (this.qs()[n] ?? null);
   });
+  protected readonly lang = computed(() => langOf(this.s.song() ?? {}));
+  /** 選項（norm 過的字）→ 歌詞裡第一次出現的字形（Lang.show）：日文片假名、漢字照原樣顯示；en 的 show 就是 norm。 */
+  private readonly surface = computed(() => {
+    const m = new Map<string, string>();
+    for (const l of this.s.lines())
+      for (const t of l.tokens) {
+        const L = tokLang(t, this.s.song() ?? {});
+        const w = L.norm(t.s);
+        if (!m.has(w)) m.set(w, L.show(t.s));
+      }
+    return m;
+  });
   protected readonly words = computed(() => {
     const q = this.q();
     return q ? this.s.lines()[q.i].tokens : [];
@@ -112,6 +124,16 @@ export class QuizPanel {
   protected zh(w: string): string {
     const L = wordLang(w, this.s.song() ?? {});
     return (lookup(w, this.dicts()[L.code] ?? {}, L.forms) || '').split('（')[0];
+  }
+
+  /** 選項顯示的字：答案用題目 token 的字形，干擾字用歌詞裡找得到的字形，找不到就原字。 */
+  protected show(q: Question, w: string): string {
+    if (w === q.w) return tokLang(q.tok, this.s.song() ?? {}).show(q.tok.s);
+    return this.surface().get(w) ?? w;
+  }
+
+  protected optLang(w: string): string {
+    return wordLang(w, this.s.song() ?? {}).code;
   }
 
   protected blanks(w: string): string {

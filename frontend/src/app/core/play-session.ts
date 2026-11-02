@@ -84,11 +84,13 @@ export class PlaySession {
     return i;
   });
 
-  /** 點單字的小視窗（s 已 norm 過的 token；null = 關閉）。6 秒自動關。 */
+  /** 點單字的小視窗（s 是 Lang.show 過的 token；null = 關閉）。6 秒自動關。 */
   private readonly _popWord = signal<Token | null>(null);
   readonly popWord = this._popWord.asReadonly();
   private popTimer?: ReturnType<typeof setTimeout>;
   private prevLine = -1; // onTick 上一次的目前句（記 heard 用；拖進度條跳太多不算）
+  // 🔁 重播後停下來要再唸一次答案。不用 active.set(null)：題目畫面、按錯的選項會在重播時消失
+  private resay = false;
 
   /** 開新的一局（E）。換了歌：videoIndex 歸 0；offset 讀 off_<videoId> 或預設。mode/quizLevel/singAll 沿用。依歌曲語言填 tokens。 */
   open(
@@ -141,7 +143,9 @@ export class PlaySession {
     if (n >= 0) {
       if (this.player.playing()) this.player.pause();
       // 最難聽發音：剛停下來時唸一次答案（不是點擊，iOS 可能擋；畫面有「🔊 再聽一次」）
-      if (this.active() !== n && this.listenExpert()) this.sayAnswer(this.quizQs()[n]);
+      if ((this.active() !== n || this.resay) && this.listenExpert())
+        this.sayAnswer(this.quizQs()[n]);
+      this.resay = false;
       this.active.set(n);
     }
     if (t > lines[lines.length - 1].end && !this.finished()) this.finish();
@@ -211,11 +215,12 @@ export class PlaySession {
 
   /** 點單字：發音＋小視窗（E）。點擊時同步呼叫（iOS 發音要在手勢裡）。聽聽看播放中會先暫停。 */
   tapWord(t: Token): void {
-    const w = tokLang(t, this.song() ?? {}).norm(t.s);
+    const L = tokLang(t, this.song() ?? {});
+    const w = L.norm(t.s);
     if (!w) return;
     if (this.mode() === 'listen' && this.player.playing()) this.player.pause();
-    const p = { ...t, s: w };
-    this.pron.say(p, tokLang(t, this.song() ?? {}));
+    const p = { ...t, s: L.show(t.s) }; // 顯示原本的字形（片假名留著）；en 的 show 就是 norm
+    this.pron.say(p, L);
     this._popWord.set(p);
     this.holdPop(false);
   }
@@ -279,6 +284,7 @@ export class PlaySession {
 
   /** 跳回某題那句的開頭（補答、🔁 再聽一次），點擊時同步呼叫，同步 play()。 */
   jumpTo(q: Question): void {
+    this.resay = true; // 最難聽發音：重播到句尾停下時再唸一次答案
     this.player.seek(this.lines()[q.i].t + this.offset() - 0.3);
     this.player.play();
   }
