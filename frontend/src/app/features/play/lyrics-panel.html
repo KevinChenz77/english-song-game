@@ -1,3 +1,17 @@
+@if (lang().reading) {
+  @let m = reading.mode();
+  <button
+    type="button"
+    class="reading"
+    [attr.aria-pressed]="m !== 'off'"
+    [attr.aria-label]="
+      '讀音 ' + MODE[m].sym + '：' + MODE[m].name + '（點一下換' + MODE[MODE[m].next].name + '）'
+    "
+    (click)="reading.next()"
+  >
+    讀音 <span [attr.lang]="m === 'off' ? null : 'ja'">{{ MODE[m].sym }}</span>
+  </button>
+}
 <div class="lyrics" #box>
   @for (r of rows(); track $index; let i = $index) {
     @let now = i === session.currentLine();
@@ -8,7 +22,12 @@
       [class.past]="i < session.currentLine()"
       [class.ok]="r.passed"
     >
-      <div class="en">
+      <div
+        class="en"
+        [attr.lang]="lang().code"
+        [class.ruby]="lang().reading"
+        [class.unspaced]="!lang().spaced"
+      >
         @if (session.mode() === 'listen') {
           <button type="button" class="seek" [class.on]="now" aria-label="從這句開始播" (click)="seek(r.l.t)">
             ▶
@@ -20,15 +39,19 @@
               w.t.s
             }}</span>
           } @else {
+            @let rt = reading.of(w.t, w.L);
             <button
               type="button"
               class="w"
+              [attr.lang]="w.L === lang() ? null : w.L.code"
               [class.known]="w.known"
               [class.sung]="now && k < sung()"
               (click)="session.tapWord(w.t)"
-            >{{ w.t.s }}</button>
+            >@if (rt) {<ruby>{{ w.t.s }}<rt>{{ rt }}</rt></ruby>} @else {{{ w.t.s }}}</button>
           }
-          {{ ' ' }}
+          @if (lang().spaced) {
+            {{ ' ' }}
+          }
         }
       </div>
       @let zh = session.translations()[r.l.text];
@@ -43,7 +66,7 @@
         <div class="vocab">
           @for (c of r.chips; track c.w) {
             <button type="button" class="chip" (click)="session.tapWord(c.t)">
-              <b>{{ c.w }}</b> {{ c.zh }}
+              <b [attr.lang]="c.code">{{ c.w }}</b> {{ c.zh }}
             </button>
           }
         </div>

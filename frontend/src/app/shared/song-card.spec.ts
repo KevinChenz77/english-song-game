@@ -16,4 +16,15 @@ describe('SongCard', () => {
     expect(host.classList).toContain('gold');
     expect(host.textContent).toContain('⭐⭐☆☆ 👑');
   });
+
+  it('非英文歌才有語言小標籤', async () => {
+    const f = TestBed.createComponent(SongCard);
+    f.componentRef.setInput('song', { emoji: '🎵', title: 'T', from: 'F' });
+    await f.whenStable();
+    const el: HTMLElement = f.nativeElement;
+    expect(el.querySelector('.lang')).toBeNull();
+    f.componentRef.setInput('song', { emoji: '🎵', title: 'T', from: 'F', lang: 'ja' });
+    await f.whenStable();
+    expect(el.querySelector('.lang')?.textContent).toBe('日文');
+  });
 });

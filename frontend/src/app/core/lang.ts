@@ -6,7 +6,10 @@ import { STOP, enForms, norm } from './game/text';
  * 讀音、TTS、ASR 等欄位由第一／二期的分支加。
  */
 export interface Lang {
-  code: string; // BCP 47：'en' | 'ja'；也用在 dict.<code>.json
+  code: string; // BCP 47：'en' | 'ja'；也用在 dict.<code>.json、[attr.lang]
+  name: string; // 選歌卡片標籤
+  spaced: boolean; // token 之間顯示空白（ja 不插空白，改 CSS 小間距）
+  reading: boolean; // 有讀音輔助（ruby）可切換
   match?: RegExp; // 這個語言的字出現在別的語言的歌裡時怎麼認
   split(text: string): Token[]; // 後端沒給 tokens 時的斷詞
   norm(s: string): string; // 比對／查字典的 key
@@ -37,6 +40,9 @@ const jaWords = (p: string) =>
 export const LANGS: Record<string, Lang> = {
   en: {
     code: 'en',
+    name: '英文',
+    spaced: true,
+    reading: false,
     match: /^[A-Za-z][A-Za-z'’]*$/,
     split: (text) => text.split(/\s+/).map((s) => tag(s, 'en')),
     norm,
@@ -49,6 +55,9 @@ export const LANGS: Record<string, Lang> = {
   },
   ja: {
     code: 'ja',
+    name: '日文',
+    spaced: false,
+    reading: true,
     // 保底用：正常情況後端會給 tokens。空白永遠是 token 邊界。
     split: (text) =>
       text

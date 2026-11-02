@@ -139,3 +139,37 @@ button.zh.empty {
   color: var(--good);
   border-color: var(--good);
 }
+/* 讀音切換（只有有讀音的語言才有） */
+.reading {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 4px 14px;
+  margin-bottom: 8px;
+  border-radius: 999px;
+  background: #eef6ff;
+  color: var(--ink);
+  font-size: 17px;
+}
+.reading span {
+  display: inline-block;
+  min-width: 1.2em;
+  font-weight: 700;
+  color: var(--accent);
+}
+.reading[aria-pressed='false'] {
+  background: transparent;
+  border: 2px solid var(--line-strong, var(--accent));
+}
+/* 有 ruby 的語言：固定較高的行距，切換讀音／目前句都不會重新排版 */
+.en.ruby {
+  line-height: 2.6;
+}
+rt {
+  font-size: 0.5em;
+  line-height: 1;
+}
+/* 不用空白分隔的語言（ja）：token 之間一點間距，看得出哪裡可以點 */
+.en.unspaced .w,
+.en.unspaced .blank {
+  margin-inline: 0.12em;
+}
