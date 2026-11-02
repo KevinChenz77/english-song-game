@@ -214,13 +214,19 @@ def song_content(song_id: Annotated[str, Path(pattern=r"^[a-z0-9-]{1,40}$")]):
         if row is None:
             return err(404, "not_found")
         tr = dict(db.execute("SELECT line, zh FROM translations WHERE song_id = ?", (song_id,)))
+        tok = {}
+        if db.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'tokens'").fetchone():
+            tok = {line: json.loads(j) for line, j in db.execute("SELECT line, json FROM tokens WHERE song_id = ?", (song_id,))}
     finally:
         db.close()
     body = {"ok": True, "songId": song_id, "lrc": row[0], "translations": tr, "updatedAt": row[1]}
+    if tok:  # 選填（API v2.1）：{原句: [[s, r?, ro?, l?], ...]}，沒有資料就不回這個欄位
+        body["tokens"] = tok
     return JSONResponse(body, headers={"Cache-Control": "public, max-age=300"})
 
 
 CONTENT_SCHEMA = {"songs": {"song_id", "lrc", "updated_at"}, "translations": {"song_id", "line", "zh"}}
+OPTIONAL_SCHEMA = {"tokens": {"song_id", "line", "json"}}  # 沒有這張表的舊 db 照樣能上傳；有的話欄位要對
 
 
 def replace_content(raw):
@@ -233,8 +239,9 @@ def replace_content(raw):
             f.write(raw)
         db = sqlite3.connect(f"file:{quote(tmp)}?mode=ro", uri=True)
         try:
-            for table, cols in CONTENT_SCHEMA.items():
-                if not cols <= {r[1] for r in db.execute(f"PRAGMA table_info({table})")}:
+            for table, cols in {**CONTENT_SCHEMA, **OPTIONAL_SCHEMA}.items():
+                have = {r[1] for r in db.execute(f"PRAGMA table_info({table})")}
+                if (have or table in CONTENT_SCHEMA) and not cols <= have:
                     return None
             if db.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                 return None

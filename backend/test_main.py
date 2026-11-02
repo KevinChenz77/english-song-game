@@ -85,10 +85,15 @@ def test_cors():
     assert "access-control-allow-origin" not in bad.headers
 
 
-def make_content_db(songs, schema_ok=True):
-    """用假資料產生 content.db 的位元組（不放真的歌詞）。"""
+def make_content_db(songs, schema_ok=True, tokens=None):
+    """用假資料產生 content.db 的位元組（不放真的歌詞）。tokens：None＝沒有 tokens 表；{song_id: {句: token 陣列}}。"""
     path = os.path.join(tempfile.mkdtemp(), "c.db")
     db = sqlite3.connect(path)
+    if tokens is not None:
+        db.execute("CREATE TABLE tokens (song_id TEXT NOT NULL, line TEXT NOT NULL, json TEXT NOT NULL, PRIMARY KEY (song_id, line))")
+        for sid, lines in tokens.items():
+            for line, toks in lines.items():
+                db.execute("INSERT INTO tokens VALUES (?, ?, ?)", (sid, line, json.dumps(toks, ensure_ascii=False)))
     if schema_ok:
         db.execute("CREATE TABLE songs (song_id TEXT PRIMARY KEY, lrc TEXT NOT NULL, updated_at TEXT NOT NULL)")
     else:
@@ -176,3 +181,27 @@ def test_transfer_encoding_rejected():
     for path in ("/api/save", "/api/admin/content"):
         r = client.post(path, content=b"{}", headers={"Transfer-Encoding": "chunked", "Content-Type": "application/json"})
         assert r.status_code == 400 and r.json()["detail"] == "Transfer-Encoding not allowed", path
+
+
+def test_content_tokens(monkeypatch):
+    """API v2.1：有 tokens 才回 tokens；沒有 tokens 表的舊 db 照樣能上傳。句子與 token 都是自編的。"""
+    monkeypatch.setattr(main, "ADMIN_TOKEN", "secret")
+    toks = [["ねこ", None, "neko"], ["学校", "がっこう", "gakkou"], ["happy", None, None, "en"]]
+    raw = make_content_db({"neko": "ねこ学校 happy", "plain": "red fox"}, tokens={"neko": {"ねこ学校 happy": toks}})
+    assert admin(raw) == (200, {"ok": True, "songs": 2})
+    body = client.get("/api/songs/neko/content").json()
+    assert body["tokens"] == {"ねこ学校 happy": toks} and body["translations"] == {"ねこ学校 happy": "哈囉世界"}
+    assert "tokens" not in client.get("/api/songs/plain/content").json()  # 有表但這首沒有列
+    # 沒有 tokens 表（舊 db）→ 能上傳、不回 tokens
+    assert admin(make_content_db({"plain": "red fox"})) == (200, {"ok": True, "songs": 1})
+    assert "tokens" not in client.get("/api/songs/plain/content").json()
+    # tokens 表欄位不對 → 拒絕
+    bad = os.path.join(tempfile.mkdtemp(), "b.db")
+    with open(bad, "wb") as f:
+        f.write(make_content_db({"plain": "red fox"}))
+    db = sqlite3.connect(bad)
+    db.execute("CREATE TABLE tokens (song_id TEXT, words TEXT)")
+    db.commit()
+    db.close()
+    with open(bad, "rb") as f:
+        assert admin(f.read()) == (400, {"ok": False, "error": "bad_content"})
