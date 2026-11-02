@@ -12,7 +12,7 @@
       </button>
     }
   </div>
-  <div class="stars" aria-label="這首歌的星星">{{ stars() }}</div>
+  <div class="stars" role="img" [attr.aria-label]="'這首歌的星星：' + stars()">{{ stars() }}</div>
 </div>
 @if (song.error()) {
   <p>這首歌的設定讀不到 😢 請確認網路後再試一次。</p>

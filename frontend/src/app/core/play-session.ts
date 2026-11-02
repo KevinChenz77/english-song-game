@@ -61,10 +61,13 @@ export class PlaySession {
   readonly singSummary = signal<SingSummary | null>(null);
   readonly parentOpen = signal(false);
 
-  /** 目前句 index（-1 = 還沒開始）。唯一來源，由 time 推出。 */
+  /** 目前句 index（-1 = 還沒開始）。唯一來源，由 time 推出；最後一句唱完後仍停在最後一句（同舊版）。 */
   readonly currentLine = computed(() => {
-    const t = this.time();
-    return this.lines().findIndex((l) => t >= l.t && t < l.end);
+    const t = this.time(),
+      ls = this.lines();
+    let i = -1;
+    while (i + 1 < ls.length && ls[i + 1].t <= t) i++;
+    return i;
   });
 
   /** 點單字的小視窗（norm 過的字；null = 關閉）。3 秒自動關。 */
@@ -99,14 +102,14 @@ export class PlaySession {
     if (i >= 0 && i !== this.prevLine) {
       // 只算照順序播到的句子（容許計時器變慢時一次跳 3 句），拖進度條不算
       if (i > this.prevLine && i - this.prevLine <= 3) {
-        const before = this.heard().size;
         const s = new Set(this.heard());
         for (let k = this.prevLine + 1; k <= i; k++) s.add(k);
         this.heard.set(s);
         const need = lines.length * 0.8;
         const kidId = this.kidId(),
           song = this.song();
-        if (this.mode() === 'listen' && before < need && s.size >= need && kidId !== null && song)
+        // 每多聽一句都會再呼叫；Rewards.earn 每首歌每項只給一次
+        if (this.mode() === 'listen' && s.size >= need && kidId !== null && song)
           this.rewards.earn(kidId, song, 'listen');
       }
       this.prevLine = i;

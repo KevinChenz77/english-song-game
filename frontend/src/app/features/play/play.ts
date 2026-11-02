@@ -42,7 +42,7 @@ export class Play {
   protected readonly session = inject(PlaySession);
   protected readonly player = inject(YoutubePlayer);
   private readonly yt = viewChild.required<ElementRef<HTMLElement>>('yt');
-  private created = false;
+  private createdFor: string | null = null; // 已建立播放器的 song.id（同一個 Play 換歌時重建）
 
   protected readonly tabs: [PlayMode, string][] = [
     ['listen', '🎧 聽聽看'],
@@ -83,12 +83,16 @@ export class Play {
         kidId = this.kidId();
       untracked(() => this.session.open(kidId, s, c.lines, c.translations));
     });
-    // open() 之後建立播放器（只建一次）；離開畫面就銷毀，回來是全新的 player
+    // 這個元件自己的資料都到了（上面的 effect 已先 open()）才建立播放器，每首歌一次。
+    // 所以 open()/setMode() 都發生在播放器 ready 之前，不會打斷已經按下的 ▶。
+    // 離開畫面就銷毀，回來是全新的 player。
     afterRenderEffect(() => {
-      const s = this.session.song();
-      if (this.created || s?.id !== this.songId() || !this.session.lines().length) return;
-      this.created = true;
+      if (!this.song.hasValue() || !this.content.hasValue()) return;
+      const s = this.song.value();
+      if (this.createdFor === s.id) return;
       const v = s.videos[untracked(this.session.videoIndex)];
+      if (!v) return;
+      this.createdFor = s.id;
       this.player.create(
         this.yt().nativeElement,
         v.id,

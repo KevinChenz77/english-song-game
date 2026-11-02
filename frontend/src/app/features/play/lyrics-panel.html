@@ -31,7 +31,7 @@
           {{ ' ' }}
         }
       </div>
-      @let zh = session.translations()[r.l.text] || '（翻譯載入中… 也可以點這裡自己填）';
+      @let zh = session.translations()[r.l.text] || '（還沒有翻譯，也可以點這裡自己填）';
       @if (session.parentOpen()) {
         <button type="button" class="zh" (click)="editZh(r.l.text)">{{ zh }}</button>
       } @else {

@@ -4,7 +4,7 @@ import { YTNamespace, loadYouTubeApi } from './youtube-api';
 /**
  * YouTube iframe 包裝。不 inject PlaySession，callback 由 Play 傳入。
  * - iframe_api script 由共用的 loadYouTubeApi() 插入（只插一次）；onReady 後每 100ms 呼叫 onTick(currentTime)。
- * - Play 建立後呼叫 create()，DestroyRef.onDestroy 呼叫 destroy()。
+ * - Play 在自己的歌曲設定＋歌詞都載入後，以 afterRenderEffect 呼叫 create()（每首歌一次），DestroyRef.onDestroy 呼叫 destroy()。
  * - iOS：play() 必須在點擊事件的同步呼叫鏈裡被呼叫（不能點擊 → 改 signal → effect → play）。
  */
 @Service()
