@@ -61,6 +61,7 @@
 .sw-miss {
   all: unset;
   color: #b35c00;
+  padding: 4px 2px;
   text-decoration: underline;
   cursor: pointer;
 }
@@ -78,4 +79,7 @@
   background: #eef6ff;
   color: var(--ink);
   font-weight: 400;
+}
+.note:empty {
+  margin: 0;
 }

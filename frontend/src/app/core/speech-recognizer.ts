@@ -30,6 +30,7 @@ export class SpeechRecognizer {
    * 唸完停 1.2 秒、最長 8 秒、4 秒沒聲音就自動結束。
    */
   async record(onLevel: (level: number) => void): Promise<Float32Array | null> {
+    this.stopRec?.(); // 上一次錄音還沒結束：先收掉，不開第二個 stream
     if (!navigator.mediaDevices)
       throw new Error('需要 HTTPS 網址（或在電腦上用 localhost）才能使用麥克風');
     const W = window as unknown as { webkitAudioContext?: typeof AudioContext };
@@ -38,7 +39,20 @@ export class SpeechRecognizer {
     const media = navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
     }); // 同步呼叫，await 在後面
-    const stream = await media;
+    // 還在等麥克風權限時被 stop()：拿到 stream 後馬上關掉
+    let cancelled = false;
+    const cancel = (this.stopRec = () => {
+      cancelled = true;
+      this.stopRec = null;
+    });
+    const stream = await media.catch((e) => {
+      if (this.stopRec === cancel) this.stopRec = null;
+      throw e;
+    });
+    if (cancelled) {
+      stream.getTracks().forEach((t) => t.stop());
+      return null;
+    }
     const src = actx.createMediaStreamSource(stream);
     // ponytail: ScriptProcessorNode 已棄用，照搬舊版；瀏覽器移除時改 AudioWorklet
     const proc = actx.createScriptProcessor(4096, 1, 1);
@@ -56,6 +70,7 @@ export class SpeechRecognizer {
         proc.disconnect();
         src.disconnect();
         stream.getTracks().forEach((t) => t.stop());
+        void actx.suspend(); // 不錄時不佔音訊裝置；下次 record() 會 resume()
         if (voiced * sec < 0.4) return resolve(null); // 有聲音的部分太短：當成沒唸，避免 Whisper 亂產生文字
         const buf = new Float32Array(chunks.reduce((n, c) => n + c.length, 0));
         let o = 0;

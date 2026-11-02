@@ -42,6 +42,7 @@ export class PlaySession {
   private readonly rewards = inject(Rewards);
   private readonly recognizer = inject(SpeechRecognizer);
   private readonly backing = inject(BackingTrack); // 唱唱看伴奏（D）
+  private singRun = 0; // 唱唱看錄音／辨識的次數；舊的結果對不上就丟掉（D）
 
   readonly kidId = signal<number | null>(null);
   readonly song = signal<Song | null>(null);
@@ -161,8 +162,10 @@ export class PlaySession {
    */
   async startSing(onLevel: (level: number) => void = () => {}): Promise<void> {
     const idx = this.active();
-    if (idx === null) return;
-    const line = this.lines()[(this.questions() as SingStop[])[idx].i];
+    const stop = idx === null ? undefined : this.singStopAt(idx);
+    if (idx === null || !stop || stop.state === 'rec' || stop.state === 'busy') return; // 連點不重複錄
+    const run = ++this.singRun;
+    const line = this.lines()[stop.i];
     try {
       speechSynthesis.cancel(); // ponytail: 單字發音的 <audio> 沒停；Pronunciation 有 stop() 時改呼叫它
     } catch {
@@ -174,7 +177,7 @@ export class PlaySession {
     this.backing.play(line.t);
     // 只在這句還是同一次錄音／辨識時才寫回（換模式、跳過後就丟掉結果）
     const still = (state: SingStop['state']) =>
-      this.active() === idx && this.singStopAt(idx)?.state === state;
+      run === this.singRun && this.active() === idx && this.singStopAt(idx)?.state === state;
     const retry = (state: SingStop['state'], msg: string) => {
       if (still(state)) this.patchStop(idx, { state: 'ready', msg });
     };
@@ -204,13 +207,23 @@ export class PlaySession {
     if (!text) return retry('busy', '好像沒聽到喔，靠近一點再唸一次 🎤');
     if (!still('busy')) return;
     const result = scoreLine(line.text, text);
-    const s = this.singStopAt(idx)!;
     this.patchStop(
       idx,
       result.score >= 0.7
         ? { result, state: 'pass', passed: true }
-        : { result, state: 'fail', tries: s.tries + 1 },
+        : { result, state: 'fail', tries: stop.tries + 1 },
     );
+  }
+
+  /** 中斷唱唱看的錄音／辨識（D）：離開唱唱看面板時呼叫；進行中的結果丟掉，這句回到 ready。 */
+  cancelSing(): void {
+    this.singRun++;
+    this.recognizer.stop();
+    this.backing.stop();
+    const idx = this.active();
+    const s = idx === null ? undefined : this.singStopAt(idx);
+    if (idx !== null && (s?.state === 'rec' || s?.state === 'busy'))
+      this.patchStop(idx, { state: 'ready' });
   }
 
   /** 下一句／跳過（D）。點擊時同步呼叫，同步 player.play()。 */

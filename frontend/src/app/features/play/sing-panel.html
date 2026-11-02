@@ -1,7 +1,5 @@
-<section class="box" aria-live="polite">
-  @if (recognizer.note()) {
-    <p class="note">{{ recognizer.note() }}</p>
-  }
+<section class="box">
+  <p class="note" aria-live="polite">{{ recognizer.note() }}</p>
   @if (session.singSummary(); as s) {
     <!-- 不顯示分數，達標時由慶祝畫面告訴小朋友 -->
     <h3>🎉 唱完了！</h3>
@@ -37,32 +35,44 @@
         }
       </div>
       <div class="zhq">{{ session.translations()[line()?.text ?? ''] }}</div>
-      @if (s.msg) {
-        <p>{{ s.msg }}</p>
-      }
+      <!-- 狀態文字放在同一個一直存在的 live region，螢幕閱讀器才會念出變化 -->
+      <div aria-live="polite">
+        @if (s.msg) {
+          <p>{{ s.msg }}</p>
+        }
+        @switch (s.state) {
+          @case ('rec') {
+            <p>🎤 我在聽…</p>
+          }
+          @case ('busy') {
+            <p>聽聽看你唸得怎麼樣…</p>
+          }
+          @case ('pass') {
+            <p class="big-ok">⭐ 過關！</p>
+          }
+          @case ('fail') {
+            <p>
+              @if (missHint()) {
+                差一點！這幾個字再唸清楚一點：{{ missHint() }}（點橘色的字聽聽看）
+              } @else {
+                差一點！再試一次
+              }
+            </p>
+          }
+        }
+      </div>
       @switch (s.state) {
         @case ('rec') {
-          <p>🎤 我在聽…</p>
           <div class="lvlbar" aria-hidden="true"><div [style.width.%]="level() * 100"></div></div>
           <button type="button" class="mic rec" (click)="recognizer.stop()">✅ 唸完了</button>
         }
-        @case ('busy') {
-          <p>聽聽看你唸得怎麼樣…</p>
-        }
+        @case ('busy') {}
         @case ('pass') {
           <!-- 過關後也能再試（保留過關紀錄，重唱沒過也不會被取消） -->
-          <p class="big-ok">⭐ 過關！</p>
           <button type="button" class="mic" (click)="session.nextStop()">▶ 下一句</button>
           <button type="button" class="mic ghost" (click)="sing()">🎤 再試一次</button>
         }
         @case ('fail') {
-          <p>
-            @if (missHint()) {
-              差一點！這幾個字再唸清楚一點：{{ missHint() }}（點橘色的字聽聽看）
-            } @else {
-              差一點！再試一次
-            }
-          </p>
           <button type="button" class="mic" (click)="sing()">🎤 再試一次</button>
           <button type="button" class="ghost" (click)="listenAgain()">🔁 再聽一次</button>
           <button type="button" class="ghost" (click)="session.nextStop()">

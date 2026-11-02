@@ -45,7 +45,7 @@ export class SingPanel {
     void this.recognizer.load().catch(() => {}); // 失敗訊息在 recognizer.note
     this.backing.create(this.session.song()?.karaoke);
     inject(DestroyRef).onDestroy(() => {
-      this.recognizer.stop();
+      this.session.cancelSing();
       this.backing.destroy();
     });
   }

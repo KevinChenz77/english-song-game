@@ -107,6 +107,25 @@ describe('PlaySession 唱唱看', () => {
     expect(isHallucination('tiny boats')).toBe(false);
   });
 
+  it('連點換你唸：只錄一次', async () => {
+    s.active.set(0);
+    const p = s.startSing();
+    void s.startSing();
+    expect(calls.filter((c) => c === 'record')).toHaveLength(1);
+    await p;
+  });
+
+  it('cancelSing：辨識中的結果丟掉，這句回到 ready 可以再唸', async () => {
+    s.active.set(0);
+    heard = 'the purple cat jumps high';
+    const p = s.startSing();
+    s.cancelSing();
+    expect(q(0).state).toBe('ready');
+    await p;
+    expect(q(0).result).toBeUndefined();
+    expect(q(0).state).toBe('ready');
+  });
+
   it('辨識中跳過：結果丟掉，不寫回', async () => {
     s.active.set(0);
     heard = 'the purple cat jumps high';
@@ -217,5 +236,29 @@ describe('PlaySession 唱唱看', () => {
     s.singAll.set(true);
     await fixture.whenStable();
     expect(text()).toContain('⏭ 先跳過');
+  });
+});
+
+describe('SpeechRecognizer.record', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('等麥克風權限時被 stop()：拿到 stream 馬上關掉、回傳 null', async () => {
+    const trackStop = vi.fn();
+    let grant!: (s: unknown) => void;
+    const getUserMedia = vi.fn(() => new Promise((r) => (grant = r)));
+    vi.stubGlobal('navigator', { mediaDevices: { getUserMedia } });
+    vi.stubGlobal(
+      'AudioContext',
+      class {
+        resume = () => Promise.resolve();
+      },
+    );
+    const r = TestBed.inject(SpeechRecognizer);
+    const p = r.record(() => {});
+    expect(getUserMedia).toHaveBeenCalledTimes(1); // 同步呼叫（iOS）
+    r.stop();
+    grant({ getTracks: () => [{ stop: trackStop }] });
+    expect(await p).toBeNull();
+    expect(trackStop).toHaveBeenCalled();
   });
 });
