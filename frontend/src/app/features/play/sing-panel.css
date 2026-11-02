@@ -1,85 +1,268 @@
 .box {
   background: var(--card);
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 12px;
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-1);
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-3);
   text-align: center;
 }
-.sent {
-  font-size: 22px;
+.actions {
+  justify-content: center;
+  align-items: center;
+  margin: var(--sp-3) 0;
+}
+.prog {
+  display: inline-block;
+  font-size: var(--fs-sm);
   font-weight: 600;
-  margin: 8px 0;
+  color: var(--ink-2);
+  background: var(--bg);
+  border-radius: var(--r-pill);
+  padding: var(--sp-1) var(--sp-3);
+}
+
+/* ── 模式卡（N1）：大圖示＋名稱＋一行短說明，手機上兩張並排不斷行 ── */
+.modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 220px));
+  justify-content: center;
+  gap: var(--sp-3);
+  margin: var(--sp-2) 0 var(--sp-3);
+}
+button.mode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-3) var(--sp-2);
+  border-radius: var(--r-lg);
+  background: #fff;
+  color: var(--ink);
+  border: 2px solid var(--line-strong);
+  box-shadow: var(--sh-1);
+}
+.mode .ico {
+  font-size: 40px;
+  line-height: 1;
+}
+.mode b {
+  font-size: var(--fs-lg);
+}
+.mode small {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+button.mode.on {
+  border: 3px solid var(--accent);
+  background: var(--hl-bg);
+  box-shadow: var(--sh-2);
+}
+
+/* ── 句子與結果 ── */
+.sent {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  line-height: 1.5;
+  margin: var(--sp-2) 0;
 }
 .zhq {
-  font-size: 18px;
-  color: #5f7489;
+  font-size: var(--fs-md);
+  color: var(--ink-2);
 }
-.modes,
-.chips {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin: 10px 0;
-}
-.modes button.on {
-  background: var(--accent);
-  color: #fff;
-}
-.mic {
-  font-size: 24px;
-  min-height: 64px;
-  padding: 10px 26px;
-  border-radius: 999px;
-  margin: 6px;
-}
-.mic.rec {
-  background: var(--bad);
-  animation: pulse 1s infinite;
-}
-.ghost {
-  margin: 6px;
-}
-.lvlbar {
-  height: 12px;
-  background: #eef4fa;
-  border-radius: 6px;
-  overflow: hidden;
-  margin: 10px auto;
-  max-width: 320px;
-}
-.lvlbar > div {
-  height: 100%;
-  width: 0;
-  background: var(--good);
-  transition: width 0.1s;
-}
-/* 顏色比舊版深一點，白底對比度過 WCAG AA */
+/* 唸對：綠（白底 5.02）；沒唸到：橘色可點的字，44px 觸控範圍 */
 .sw-ok {
-  color: #1e7d4a;
+  color: var(--good);
 }
 .sw-miss {
   all: unset;
-  color: #b35c00;
-  padding: 4px 2px;
-  text-decoration: underline;
+  display: inline-block;
+  min-width: var(--tap-min);
+  min-height: var(--tap-min);
+  line-height: var(--tap-min);
+  padding: 0 var(--sp-1);
+  color: var(--warn);
+  text-decoration: underline dotted 3px;
+  text-underline-offset: 6px;
+  border-radius: var(--r-sm);
   cursor: pointer;
 }
 .sw-miss:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
 }
+
+/* ── 狀態文字 ── */
+.status p {
+  margin: var(--sp-2) 0;
+}
+.st {
+  display: inline-block;
+  font-weight: 700;
+  border-radius: var(--r-pill);
+  padding: var(--sp-1) var(--sp-4);
+}
+.st-rec {
+  color: var(--accent);
+  background: #e6f1fb;
+}
+.st-busy {
+  color: var(--ink-2);
+  background: var(--bg);
+  animation: breathe 1.2s ease-in-out infinite;
+}
+.st-fail {
+  color: var(--ink-2);
+}
+/* 過關（N3）：比「差一點」大、綠底、彈一下並冒出星星 */
 .big-ok {
-  font-size: 28px;
+  display: inline-block;
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  color: var(--good);
+  background: var(--good-bg);
+  border-radius: var(--r-pill);
+  padding: var(--sp-2) var(--sp-6);
+  animation: pop 0.5s ease-out;
+}
+
+/* ── 麥克風鍵：一個畫面最大的按鈕 ── */
+.mic {
+  font-size: 24px;
+  font-weight: 700;
+  min-height: var(--tap-kid);
+  padding: 10px 28px;
+  border-radius: var(--r-pill);
+  box-shadow: var(--sh-2);
+}
+/* 錄音中（N2）：主色＋外圈擴散光環（不用紅色，紅色在遊戲裡是「錯」） */
+.mic.rec {
+  animation: ring 1.2s ease-out infinite;
+}
+.lvl {
+  height: 16px;
+  max-width: 320px;
+  margin: var(--sp-3) auto 0;
+  background: var(--good-bg);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+.lvl > div {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--good), var(--hl));
+  transition: width 0.1s;
+}
+
+/* ── 伴奏開關＋耳機提示：小小一列，不搶麥克風 ── */
+.opts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0 var(--sp-3);
+}
+button.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--tap-min);
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--fs-sm);
+}
+.switch i {
+  position: relative;
+  width: 40px;
+  height: 24px;
+  border-radius: var(--r-pill);
+  background: var(--line-strong); /* 白底 3.83，關的時候也看得到 */
+  transition: background 0.15s;
+}
+.switch i::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s;
+}
+.switch[aria-pressed='true'] i {
+  background: var(--good);
+}
+.switch[aria-pressed='true'] i::after {
+  transform: translateX(16px);
+}
+.hint {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+/* ── 結算 ── */
+.done {
+  font-size: var(--fs-xl);
+  margin: var(--sp-2) 0;
+}
+.chips {
+  display: flex;
+  gap: var(--sp-2);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: var(--sp-3) 0;
 }
 .chip {
-  font-size: 15px;
-  min-height: 44px;
-  padding: 4px 12px;
-  border-radius: 999px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  min-height: var(--tap-min);
+  padding: 4px 14px;
+  border-radius: var(--r-pill);
   background: #eef6ff;
-  color: var(--ink);
-  font-weight: 400;
+  color: var(--accent);
 }
 .note:empty {
   margin: 0;
+}
+
+@keyframes ring {
+  0% {
+    box-shadow: 0 0 0 0 #1769b880;
+  }
+  100% {
+    box-shadow: 0 0 0 18px #1769b800;
+  }
+}
+@keyframes pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+/* 只動底色，字的對比不變 */
+@keyframes breathe {
+  50% {
+    background: #d3e6f7;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* 錄音中改成靜態 4px 光環；過關只變色 */
+  .mic.rec {
+    animation: none;
+    box-shadow: 0 0 0 4px var(--line-strong);
+  }
+  .big-ok,
+  .st-busy {
+    animation: none;
+  }
 }
