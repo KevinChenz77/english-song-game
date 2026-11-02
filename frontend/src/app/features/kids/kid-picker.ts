@@ -6,7 +6,7 @@ import { AVATARS } from '../../core/game/avatars';
 import { starCount } from '../../core/game/reward-rules';
 import { Cloud } from '../cloud/cloud-dialog';
 
-/** 選小朋友：卡片、✕ 刪除、新增表單＋頭像、❓ 說明、📥 匯入。 */
+/** 選小朋友：卡片、✏️ 管理模式才有刪除鍵、新增表單＋頭像、❓ 說明、📥 匯入。 */
 @Component({
   imports: [RouterLink],
   selector: 'app-kid-picker',
@@ -19,6 +19,8 @@ export class KidPicker {
   private readonly injector = inject(Injector);
   protected readonly avatars = AVATARS;
   protected readonly adding = signal(false);
+  /** ✏️ 管理：開著才顯示刪除鍵，避免小朋友誤按。 */
+  protected readonly managing = signal(false);
   protected readonly avatar = signal(AVATARS[0]);
   protected readonly nameMsg = signal('');
   private readonly nameEl = viewChild<ElementRef<HTMLInputElement>>('name');

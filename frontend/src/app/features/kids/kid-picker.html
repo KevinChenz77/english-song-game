@@ -2,26 +2,34 @@
   <h1>🎵 唱歌學英文</h1>
   <button type="button" class="ghost" routerLink="/help">❓ 遊戲說明</button>
   <button type="button" class="ghost" (click)="cloud.open('load')">📥 匯入</button>
+  @if (store.kids().length) {
+    <button type="button" class="ghost" [attr.aria-pressed]="managing()" (click)="managing.set(!managing())">
+      {{ managing() ? '✅ 完成' : '✏️ 管理' }}
+    </button>
+  }
 </div>
-<p>誰要玩呢？</p>
-<div class="grid">
+<h2 class="ask">誰要玩呢？</h2>
+<div class="grid kids">
   @for (k of store.kids(); track k.id) {
     <div class="kid">
       <a class="card" [routerLink]="['/kids', k.id]">
         <div class="big">{{ k.avatar }}</div>
-        <div>{{ k.name }}</div>
-        <div>⭐ {{ stars(k) }}</div>
+        <div class="name">{{ k.name }}</div>
+        <div class="stars">⭐ {{ stars(k) }}</div>
       </a>
-      <button type="button" class="del" [attr.aria-label]="'刪除 ' + k.name" (click)="remove(k)">✕</button>
+      @if (managing()) {
+        <button type="button" class="del" [attr.aria-label]="'刪除 ' + k.name" (click)="remove(k)">🗑️ 刪除</button>
+      }
     </div>
   }
   <button #addBtn type="button" class="card add" (click)="open()">
     <div class="big">➕</div>
-    <div>新增小朋友</div>
+    <div class="name">新增小朋友</div>
   </button>
 </div>
 @if (adding()) {
   <div class="form">
+    <h2>➕ 新增小朋友</h2>
     <label>名字：<input #name placeholder="例如：小明" aria-describedby="nameMsg" (keydown.enter)="add(name)" /></label>
     <p id="nameMsg" class="bad" role="status">{{ nameMsg() }}</p>
     <div class="avs" role="group" aria-label="頭像">
@@ -31,7 +39,9 @@
         </button>
       }
     </div>
-    <button type="button" (click)="add(name)">好了！</button>
-    <button type="button" class="ghost" (click)="cancel()">取消</button>
+    <div class="actions">
+      <button type="button" (click)="add(name)">好了！</button>
+      <button type="button" class="ghost" (click)="cancel()">取消</button>
+    </div>
   </div>
 }
