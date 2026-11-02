@@ -230,7 +230,8 @@ public/songs/dict.json    # 共用字典
 `core/game/save-data.ts`：`buildSave(kids)`（不含 id）、`cleanSave(data)`（不可信資料，格式錯回 null、丟掉怪的 songs／stickers）、`sameName(kids, name)`（去空白比對；後端名字不分大小寫，前端比對維持舊版的區分大小寫）。
 
 ### 5.4.1 獎勵顯示（PO 決定）
-- 星星**分歌顯示**：每首歌用 `starStr(kid.songs[id])`；不做跨歌總數（`totalStars` 不搬）。小朋友卡片、同名比較 dialog 改列各歌星星（第二波決定版面）。
+- 星星**分歌顯示**：每首歌用 `starStr(kid.songs[id])`；`totalStars` 不搬。同名比較 dialog 列各歌星星。
+- 例外（TPM 決定，照舊版）：**小朋友卡片顯示所有歌的星星總數** `⭐ N`（`kid-picker.ts` 的 `stars()`）；選歌畫面仍是各歌星星。
 - 貼紙每首歌都能拿：`Rewards.earn()` 以 `kid.songs[song.id][key]` 判斷，所以每首歌各給一次 🎤／👑／`song.sticker`，`kid.stickers` 依獲得順序累積、可重複。
 
 ### 5.5 必須照舊版保留的細節（容易漏）
