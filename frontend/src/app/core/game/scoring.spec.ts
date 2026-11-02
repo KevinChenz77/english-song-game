@@ -54,9 +54,24 @@ describe('scoreChars（日文逐字）', () => {
     expect(scoreChars(toks, 'ねこが学校へhappy', ja).score).toBe(1);
   });
 
-  it('假名被寫成漢字（ねこ→猫）＝near；沒唸到＝miss；英文 token 只比原文', () => {
+  it('假名被寫成漢字（ねこ→猫）＝near；沒唸到＝miss；英文 token 只比原文；助詞照樣標色但不算分', () => {
     expect(ok('猫が学校へ')).toEqual(['near', 'exact', 'exact', 'exact', 'miss']);
-    expect(scoreChars(toks, '猫が学校へ', ja).score).toBe(3.5 / 5);
+    expect(scoreChars(toks, '猫が学校へ', ja).score).toBe(0.5); // (ねこ 0.5＋学校 1＋happy 0) / 3
+  });
+
+  it('不相干但有助詞的句子不會過 0.6；正確句子寫成漢字照樣過', () => {
+    const T = (x: string) => x.split(' ').map((p) => ({ s: p }));
+    const line = T('ぼく は ねこ と うみ に いく よ ね');
+    const r = scoreChars(line, 'わたしはいぬとやまにいったよね', ja);
+    const all = r.words.reduce((n, w) => n + (w.ok === 'exact' ? 1 : w.ok === 'near' ? 0.5 : 0), 0);
+    expect(all / r.words.length).toBeGreaterThanOrEqual(0.6); // 助詞也算的話會過
+    expect(r.score).toBeLessThan(0.6);
+    const kanji = [{ s: 'ねこ' }, { s: 'が' }, { s: '学校', r: 'がっこう' }, { s: 'へ' }, { s: '行く', r: 'いく' }];
+    expect(scoreChars(kanji, '猫が学校へ行く', ja).score).toBeGreaterThanOrEqual(0.6);
+  });
+
+  it('全是助詞的句子：退回全部算分', () => {
+    expect(scoreChars([{ s: 'が' }, { s: 'の' }], 'が', ja).score).toBe(0.5);
   });
 
   it('讀音對到一半＝near；空字串＝0；結果帶 token（畫面標讀音）', () => {

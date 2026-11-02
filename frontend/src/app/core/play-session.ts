@@ -4,7 +4,7 @@ import { Rewards } from './rewards';
 import { SpeechRecognizer } from './speech-recognizer';
 import { LrcLine, LyricLine, PlayMode, QuizLevel, Song, Token } from './models/song.model';
 import { Question, pickQuestions } from './game/quiz';
-import { ScoredWord, scoreChars, scoreLine } from './game/scoring';
+import { ScoredWord, isPractice, scoreChars, scoreLine, wordKey } from './game/scoring';
 import { langOf, tokLang, tokenize } from './lang';
 import { BackingTrack } from './backing-track';
 import { Pronunciation } from './pronunciation';
@@ -336,9 +336,8 @@ export class PlaySession {
     const seen = new Set<string>();
     const missed: Token[] = [];
     for (const w of qs.flatMap((q) => q.result?.words ?? [])) {
-      const L = w.tok ? tokLang(w.tok, song ?? {}) : langOf(song ?? {});
-      const key = L.norm(w.t);
-      if (w.ok !== 'miss' || L.stop.has(key) || seen.has(key)) continue;
+      const key = wordKey(w, song ?? {});
+      if (w.ok !== 'miss' || !isPractice(w, song ?? {}) || seen.has(key)) continue;
       seen.add(key);
       missed.push(w.tok ?? { s: key }); // en 照舊顯示 norm 過的字
     }

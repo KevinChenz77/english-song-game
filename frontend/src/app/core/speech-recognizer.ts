@@ -112,13 +112,14 @@ export class SpeechRecognizer {
    * 載入這個語言的 Whisper（切到唱唱看時呼叫；同一個模型只載一次，失敗下次可重試）。含暖機。
    * 只留一個模型（iPad 記憶體）：換語言就丟掉舊的再載新的。
    */
-  load(L: Lang = LANGS['en']): Promise<Asr> {
+  load(L: Lang): Promise<Asr> {
     if (this.model === L.asr.model && this.asr) return this.asr;
     const old = this.asr;
     this.model = L.asr.model;
     const gen = ++this.gen; // 載入中又換語言：舊的這次不再寫提示
     const p: Promise<Asr> = (async () => {
       await old?.then((a) => a.dispose?.()).catch(() => {}); // 先放掉舊模型的記憶體
+      if (this.gen !== gen) throw new Error('stale'); // 等的時候又換了語言：這次不用下載了
       const pipeline = await this.pipelineFn();
       const files: Record<string, [number, number]> = {};
       const asr: Asr = await pipeline('automatic-speech-recognition', L.asr.model, {
@@ -154,7 +155,7 @@ export class SpeechRecognizer {
   }
 
   /** 辨識 16kHz 音訊（用這個語言的模型）；沒聽到東西回傳 ''。 */
-  async transcribe(audio: Float32Array, L: Lang = LANGS['en']): Promise<string> {
+  async transcribe(audio: Float32Array, L: Lang): Promise<string> {
     // 前後補 0.5 秒靜音：錄音一開始就是說話聲時，Whisper 會漏掉第一個字
     const padded = new Float32Array(audio.length + 16000);
     padded.set(audio, 8000);

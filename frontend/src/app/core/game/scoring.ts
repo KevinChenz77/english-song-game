@@ -136,9 +136,20 @@ export function scoreChars(
         ? 'near'
         : 'miss',
   }));
-  const score = words.length
-    ? words.reduce((s, w) => s + (w.ok === 'exact' ? 1 : w.ok === 'near' ? 0.5 : 0), 0) /
-      words.length
+  // 助詞／虛字（が、の、よ…）幾乎任何句子都有，算進來的話不相干的句子也會過：只顯示、不算分（全是虛字就全部算）
+  const real = words.filter((w) => isPractice(w, song));
+  const counted = real.length ? real : words;
+  const score = counted.length
+    ? counted.reduce((s, w) => s + (w.ok === 'exact' ? 1 : w.ok === 'near' ? 0.5 : 0), 0) /
+      counted.length
     : 0;
   return { words, score };
 }
+
+/** 評分結果裡一個字的比對 key：用這個字自己的語言（scoreChars 的 token 有 l）的 norm。 */
+export const wordKey = (w: ScoredWord, song: Pick<Song, 'lang'>) =>
+  (w.tok ? tokLang(w.tok, song) : langOf(song)).norm(w.t);
+
+/** 不是虛字／助詞（那個字語言的 stop）：日文算分、「差一點」提示、「要多練的字」都只看這些。 */
+export const isPractice = (w: ScoredWord, song: Pick<Song, 'lang'>) =>
+  !(w.tok ? tokLang(w.tok, song) : langOf(song)).stop.has(wordKey(w, song));

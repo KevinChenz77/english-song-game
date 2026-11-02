@@ -111,6 +111,7 @@ describe('PlaySession 唱唱看', () => {
     expect(isHallucination('さて、この動画を見てくれてありがとう!', LANGS['ja'])).toBe(true);
     expect(isHallucination('ご視聴ありがとうございました', LANGS['ja'])).toBe(true);
     expect(isHallucination('ねこにありがとう', LANGS['ja'])).toBe(false);
+    expect(isHallucination('ねこが見てくれてうれしい', LANGS['ja'])).toBe(false);
   });
 
   it('連點換你唸：只錄一次', async () => {
@@ -304,7 +305,7 @@ describe('PlaySession 唱唱看（日文）', () => {
     heard = 'ねこが学校';
     await s.startSing();
     expect(transcribe).toHaveBeenCalledWith(expect.any(Float32Array), LANGS['ja']);
-    expect(q().result!.score).toBe(0.6);
+    expect(q().result!.score).toBeCloseTo(2 / 3); // 助詞（が、へ）不算分
     expect(q()).toMatchObject({ state: 'pass', passed: true });
     expect(q().result!.words.map((w) => w.ok)).toEqual(['exact', 'exact', 'exact', 'miss', 'miss']);
   });
@@ -371,7 +372,7 @@ describe('SpeechRecognizer 換語言', () => {
       r as unknown as { pipelineFn: () => Promise<unknown> },
       'pipelineFn',
     ).mockResolvedValue(pipeline);
-    const en = r.load();
+    const en = r.load(LANGS['en']);
     expect(r.load(LANGS['en'])).toBe(en);
     await en;
     expect(runs[0][1]).toBeUndefined(); // en 暖機：和以前一樣不給語言
