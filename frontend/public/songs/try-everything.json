@@ -1,0 +1,23 @@
+{
+  "id": "try-everything",
+  "lrclibId": 10286343,
+  "title": "Try Everything",
+  "artist": "Shakira",
+  "from": "動物方城市 Zootopia",
+  "emoji": "🐰",
+  "videos": [
+    { "id": "c6rP-YP4c5I", "label": "官方 MV", "offset": 0.5 },
+    { "id": "jpqV3dzYOgk", "label": "歌詞版", "offset": 0 }
+  ],
+  "karaoke": { "id": "VOq9md2f_l0", "offset": -0.3 },
+  "sticker": "🦊",
+  "quiz": {
+    "normal": ["try", "fly", "heart", "run", "new", "start", "fail", "deep", "day", "end"],
+    "hard": ["falling", "sometimes", "always", "every", "myself", "heart", "breath", "though", "start", "yourself", "leave", "without", "everything", "birds", "again", "another", "making", "reach", "mistakes"],
+    "expert": ["everything", "sometimes", "mistakes", "yourself", "another", "falling", "without", "always", "breath", "filled", "making", "myself", "though", "again", "reach", "leave", "start", "could", "those"]
+  },
+  "dict": {
+    "making": "犯（making mistakes = 犯錯）",
+    "try": "嘗試（try everything = 什麼都試試看）"
+  }
+}

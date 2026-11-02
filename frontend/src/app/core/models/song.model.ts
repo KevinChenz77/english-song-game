@@ -10,6 +10,7 @@ export type PlayMode = 'listen' | 'quiz' | 'sing';
 /** public/songs/<id>.json。歌詞和翻譯不放這裡，由後端 GET /api/songs/{id}/content 提供。 */
 export interface Song {
   id: string; // 檔名＝id，只能 [a-z0-9-]
+  lrclibId: number; // LRCLIB 歌詞 id，backend/tools/build_content.py 用來抓歌詞
   title: string;
   artist: string;
   from: string;
@@ -17,7 +18,7 @@ export interface Song {
   videos: SongVideo[]; // 第一支為預設
   karaoke?: { id: string; offset: number }; // 唱唱看伴奏（純音樂）影片；沒有就不放伴奏
   sticker: string; // 填填看「挑戰」全對的專屬貼紙
-  quiz: Record<QuizLevel, string[]>; // 每個難度手動列的題目單字（普通 10、挑戰 20、最難 20）
+  quiz: Record<QuizLevel, string[]>; // 每個難度手動列的題目單字（普通 10、挑戰／最難 18～20）
   dict?: Record<string, string>; // 這首歌專用／覆蓋共用字典的解釋
 }
 

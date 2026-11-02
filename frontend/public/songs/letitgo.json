@@ -1,5 +1,6 @@
 {
   "id": "letitgo",
+  "lrclibId": 12302283,
   "title": "Let It Go",
   "artist": "Idina Menzel",
   "from": "冰雪奇緣 Frozen",
@@ -11,9 +12,9 @@
   "karaoke": { "id": "KmXKiJu_Q_g", "offset": -1.3 },
   "sticker": "❄️",
   "quiz": {
-    "normal": ["snow", "queen", "girl", "go", "door", "cold", "free", "go", "storm", "past"],
-    "hard": ["glows", "footprint", "kingdom", "looks", "howling", "heaven", "let", "always", "conceal", "know", "let", "anymore", "turn", "going", "storm", "never", "funny", "fears", "time", "limits"],
-    "expert": ["mountain", "footprint", "kingdom", "looks", "howling", "heaven", "let", "always", "conceal", "know", "let", "anymore", "turn", "care", "storm", "bothered", "distance", "controlled", "time", "limits"]
+    "normal": ["snow", "door", "sky", "wind", "cold", "storm", "queen", "light", "girl", "free"],
+    "hard": ["always", "inside", "controlled", "bothered", "stand", "frozen", "anyway", "kingdom", "going", "ground", "through", "right", "never", "thought", "small", "heaven", "break", "mountain", "footprint", "perfect"],
+    "expert": ["everything", "footprint", "isolation", "controlled", "mountain", "swirling", "perfect", "frozen", "heaven", "conceal", "through", "thought", "always", "bothered", "anymore", "flurries", "anyway", "light", "rules", "never"]
   },
   "dict": {
     "let": "讓（let it go = 放手、放下）",
