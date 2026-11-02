@@ -29,10 +29,9 @@ export class SongCatalog {
 
   /** 一個語言所有歌共用的 { word: 中文 }；查字時再疊上 song.dict。每個語言抓一次；失敗不快取、回 {}。 */
   dict(code: string): Promise<Record<string, string>> {
-    const file = code === 'en' ? 'dict' : `dict.${code}`; // TEMP：dict.json 改名 dict.en.json 前
     let p = this.dicts.get(code);
     if (!p) {
-      p = firstValueFrom(this.http.get<Record<string, string>>(`songs/${file}.json`)).catch(() => {
+      p = firstValueFrom(this.http.get<Record<string, string>>(`songs/dict.${code}.json`)).catch(() => {
         this.dicts.delete(code);
         return {};
       });

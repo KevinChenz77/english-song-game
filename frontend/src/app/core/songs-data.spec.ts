@@ -12,7 +12,7 @@ const ids: string[] = index;
 const YT_ID = /^[\w-]{11}$/;
 const json = async <T>(name: string): Promise<T> => (await import(`../../../public/songs/${name}.json`)).default;
 const load = (id: string) => json<Song>(id);
-const dictFile = (code: string) => (code === 'en' ? 'dict' : `dict.${code}`); // TEMP：dict.json 改名 dict.en.json 前
+const dictFile = (code: string) => `dict.${code}`;
 
 /** 填填看題目字的問題（空＝沒問題）：題數在歌曲語言的 quizRange 裡；每個字的語言＝wordLang，用它的 norm、字典。 */
 function quizProblems(song: Song, dicts: Dicts): string[] {
