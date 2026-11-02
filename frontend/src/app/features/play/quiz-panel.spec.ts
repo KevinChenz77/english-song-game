@@ -34,7 +34,13 @@ async function setup(level: 'normal' | 'expert' = 'normal') {
     ],
   });
   const s = TestBed.inject(PlaySession);
-  s.song.set({ id: 'demo', sticker: '❄️', dict: { boat: '船' } } as unknown as Song);
+  // 假題目單字：題數故意不是 10／20，難度卡要顯示實際數量
+  const quiz = {
+    normal: ['fox', 'boat'],
+    hard: Array(18).fill('fox'),
+    expert: Array(19).fill('boat'),
+  };
+  s.song.set({ id: 'demo', sticker: '❄️', dict: { boat: '船' }, quiz } as unknown as Song);
   s.lines.set(lines);
   s.translations.set({ 'red fox runs': '紅狐狸在跑' });
   s.mode.set('quiz');
@@ -53,14 +59,28 @@ async function setup(level: 'normal' | 'expert' = 'normal') {
 
 describe('QuizPanel', () => {
   it('還沒開始：顯示難度（挑戰帶這首歌的貼紙），點了改 quizLevel 並 setMode', async () => {
-    const { s, el, btn } = await setup();
-    expect(el.textContent).toContain('第 1 / 2 題');
+    const { s, f, el, btn } = await setup();
+    expect(el.querySelector('.prog')).toBeNull(); // 還沒出題不顯示「第 1 / N 題」
     expect(el.textContent).toContain('按 ▶ 播放');
+    expect(btn('挑戰').textContent).not.toContain('（');
+    s.active.set(0);
+    await f.whenStable();
+    expect(el.querySelector('.prog')!.textContent).toContain('第 1 / 2 題');
+    s.active.set(null);
+    await f.whenStable();
     expect(btn('挑戰').textContent).toContain('❄️');
     const setMode = vi.spyOn(s, 'setMode').mockImplementation(() => undefined);
     btn('最難').click();
     expect(s.quizLevel()).toBe('expert');
     expect(setMode).toHaveBeenCalledWith('quiz');
+  });
+
+  it('難度卡顯示這首歌實際的題數（不是寫死 10／20）', async () => {
+    const { btn } = await setup();
+    expect(btn('普通').textContent).toContain('2 題');
+    expect(btn('挑戰').textContent).toContain('18 題');
+    expect(btn('最難').textContent).toContain('19 題');
+    expect(btn('挑戰').textContent).not.toContain('20 題');
   });
 
   it('選擇題：中文提示；答錯停用＋答案提示；答對同步 play() 並顯示答對', async () => {
@@ -74,10 +94,11 @@ describe('QuizPanel', () => {
     await f.whenStable();
     expect(btn('cat').disabled).toBe(true);
     expect(btn('fox').classList).toContain('hint');
+    expect(el.textContent).toContain('再想想 🤔');
     btn('fox').click();
     expect(player.play).toHaveBeenCalledTimes(1); // 同一個 click 裡
     await f.whenStable();
-    expect(el.textContent).toContain('✅ 答對了！fox 狐狸');
+    expect(el.querySelector('.yay')!.textContent).toContain('✅ 答對了！fox 狐狸');
     expect(el.querySelector('.modes')).toBeNull(); // 答到一半不能換難度
   });
 

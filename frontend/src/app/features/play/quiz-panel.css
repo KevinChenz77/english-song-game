@@ -1,14 +1,17 @@
 .box {
   background: var(--card);
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 12px;
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-3);
   text-align: center;
 }
+.prog {
+  color: var(--ink-2);
+}
 .sent {
-  font-size: 22px;
+  font-size: var(--fs-lg);
   font-weight: 600;
-  margin: 8px 0;
+  margin: var(--sp-2) 0;
 }
 .blank {
   display: inline-block;
@@ -17,8 +20,8 @@
   color: transparent;
 }
 .zhq {
-  font-size: 18px;
-  color: #5f7489;
+  font-size: var(--fs-md);
+  color: var(--ink-2);
 }
 .hint {
   font-size: 20px;
@@ -27,33 +30,76 @@
 .typein {
   font-size: 24px;
   padding: 10px 14px;
-  border-radius: 14px;
-  border: 3px solid var(--accent2);
+  border-radius: var(--r-md);
+  border: 3px solid var(--line-strong);
   width: min(260px, 100%);
   text-align: center;
   margin: 6px;
 }
-.typein.wrong {
-  border-color: var(--bad);
-  animation: shake 0.4s;
-}
+
+/* 難度卡：大 emoji、名稱、一行短說明。iPad 三張並排，手機直排成橫條 */
 .modes {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin: 10px 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-3);
+  margin: var(--sp-3) 0;
 }
-.modes button.on {
+.modes .lvl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-1);
+  min-height: var(--tap-kid);
+  padding: var(--sp-3);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-1);
+}
+.lvl .ico {
+  font-size: 40px;
+  line-height: 1;
+}
+.lvl b {
+  font-size: var(--fs-lg);
+}
+.lvl small {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.modes .lvl.on {
   background: var(--accent);
+  border-color: var(--accent);
   color: #fff;
 }
+.lvl.on small {
+  color: #fff;
+}
+@media (max-width: 560px) {
+  .modes {
+    grid-template-columns: 1fr;
+    gap: var(--sp-2);
+  }
+  .modes .lvl {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    column-gap: var(--sp-3);
+    row-gap: 0;
+    justify-items: start;
+    text-align: start;
+    padding: var(--sp-2) var(--sp-4);
+  }
+  .lvl .ico {
+    grid-row: span 2;
+    align-self: center;
+    justify-self: center;
+  }
+}
+
 .opts {
   display: flex;
   gap: 10px;
   justify-content: center;
   flex-wrap: wrap;
-  margin: 12px 0;
+  margin: var(--sp-3) 0;
 }
 .opts button {
   display: flex;
@@ -62,35 +108,105 @@
   gap: 2px;
   font-size: 26px;
   min-width: 120px;
-  min-height: 64px;
+  min-height: var(--tap-kid);
   background: #fff;
   color: var(--ink);
-  border: 3px solid var(--accent2);
+  border: 3px solid var(--line-strong);
 }
 .opts small {
   font-size: 17px;
-  opacity: 0.75;
+  color: var(--ink-2);
 }
-.opts button.wrong {
-  animation: shake 0.4s;
-  border-color: var(--bad);
+
+/* 答錯：輕晃兩下、邊框 --warn，下方「再想想 🤔」 */
+.opts button.wrong,
+.typein.wrong {
+  border-color: var(--warn);
+  animation: nudge 0.3s;
 }
+.retry {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--warn);
+}
+/* 提示答案：跳 3 次後停住，外框一直加粗 */
 .opts button.hint {
-  animation: pulse 1s infinite;
+  border-color: var(--good);
+  box-shadow: 0 0 0 3px var(--good);
+  animation: hop 0.6s 3;
 }
-@keyframes shake {
-  25% {
-    transform: translateX(-6px);
-  }
+/* 答對：綠色膠囊彈一下，⭐ 往上飄（--good 在 --good-bg 上 4.49，用 22px 粗體＝大字 3:1） */
+.yay {
+  position: relative;
+  display: inline-block;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--r-pill);
+  background: var(--good-bg);
+  color: var(--good);
+  border: 3px solid var(--good);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  animation: pop 0.5s;
+}
+.star {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  opacity: 0;
+  animation: floatup 0.6s;
+}
+@keyframes nudge {
+  25%,
   75% {
-    transform: translateX(6px);
+    transform: translateX(-4px);
+  }
+  50% {
+    transform: translateX(4px);
   }
 }
-@keyframes pulse {
+@keyframes hop {
   50% {
     transform: scale(1.08);
   }
 }
+@keyframes pop {
+  0% {
+    transform: scale(0.6);
+  }
+  60% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes floatup {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-28px) scale(1.2);
+  }
+}
+/* 不晃、不跳：只靠顏色＋粗框＋文字；答對的 ✅ 本來就在訊息裡 */
+@media (prefers-reduced-motion: reduce) {
+  .opts button.wrong,
+  .typein.wrong,
+  .opts button.hint,
+  .yay {
+    animation: none;
+  }
+  .opts button.wrong,
+  .typein.wrong {
+    border-width: 4px;
+  }
+  .star {
+    display: none;
+  }
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

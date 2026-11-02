@@ -11,20 +11,41 @@ import { PlaySession } from '../../core/play-session';
 import { SongCatalog } from '../../core/song-catalog';
 import { Question } from '../../core/game/quiz';
 import { lookup, norm } from '../../core/game/text';
-import { QuizLevel } from '../../core/models/song.model';
+import { QuizLevel, Song } from '../../core/models/song.model';
 
-/** 難度的標籤、說明、獎勵文字（sticker = 這首歌「挑戰」的專屬貼紙）。 */
+/** 難度卡（icon、名稱、一行短說明）與結算的獎勵文字。題數用這首歌實際列的單字數。 */
 const LEVELS = (
-  sticker: string,
-): Record<QuizLevel, { label: string; desc: string; reward: string }> => ({
-  normal: { label: '🙂 普通', desc: '10 題，全對得 ⭐', reward: '一顆星星' },
-  hard: {
-    label: '🔥 挑戰',
-    desc: `20 題，全對得 ⭐＋${sticker} 貼紙`,
-    reward: `一顆星星和 ${sticker} 貼紙`,
-  },
-  expert: { label: '💎 最難', desc: '20 題自己打字，全對得金色小卡', reward: '金色小卡' },
-});
+  song: Song | null,
+): Record<
+  QuizLevel,
+  { icon: string; name: string; label: string; line: string; reward: string }
+> => {
+  const n = (l: QuizLevel) => song?.quiz?.[l]?.length ?? 0,
+    st = song?.sticker ?? '';
+  return {
+    normal: {
+      icon: '🙂',
+      name: '普通',
+      label: '🙂 普通',
+      line: `${n('normal')} 題・全對 ⭐`,
+      reward: '一顆星星',
+    },
+    hard: {
+      icon: '🔥',
+      name: '挑戰',
+      label: '🔥 挑戰',
+      line: `${n('hard')} 題・全對 ⭐${st}`,
+      reward: `一顆星星和 ${st} 貼紙`,
+    },
+    expert: {
+      icon: '💎',
+      name: '最難',
+      label: '💎 最難',
+      line: `${n('expert')} 題・自己打字・🏅`,
+      reward: '金色小卡',
+    },
+  };
+};
 
 /** 填填看面板（負責人：A）。讀寫 PlaySession；只有畫面上的暫時狀態（答錯的按鈕、答對訊息）放這裡。 */
 @Component({
@@ -37,7 +58,7 @@ export class QuizPanel {
   private readonly catalog = inject(SongCatalog);
 
   protected readonly keys: QuizLevel[] = ['normal', 'hard', 'expert'];
-  protected readonly levels = computed(() => LEVELS(this.s.song()?.sticker ?? ''));
+  protected readonly levels = computed(() => LEVELS(this.s.song()));
   protected readonly level = computed(() => this.levels()[this.s.quizLevel()]);
   private readonly dict = computed(() => ({
     ...this.catalog.dict.value(),

@@ -1,5 +1,8 @@
 <div class="box">
-  <div>{{ level().label }}　第 {{ num() }} / {{ qs().length }} 題</div>
+  <!-- 還沒出第一題、或已結算（顯示難度卡）時不顯示題號 -->
+  @if (q() || (doneN() && !s.finished())) {
+    <div class="prog">{{ level().label }}　第 {{ num() }} / {{ qs().length }} 題</div>
+  }
   @if (q(); as q) {
     <p>空格裡是哪個字？</p>
     <div class="sent">
@@ -62,12 +65,14 @@
         @for (l of keys; track l) {
           <button
             type="button"
-            class="ghost"
+            class="ghost lvl"
             [class.on]="s.quizLevel() === l"
             [attr.aria-pressed]="s.quizLevel() === l"
             (click)="setLevel(l)"
           >
-            {{ levels()[l].label }}（{{ levels()[l].desc }}）
+            <span class="ico" aria-hidden="true">{{ levels()[l].icon }}</span>
+            <b>{{ levels()[l].name }}</b>
+            <small>{{ levels()[l].line }}</small>
           </button>
         }
       </div>
@@ -75,11 +80,18 @@
   }
   <!-- 一直留在畫面上，回饋文字才會被螢幕閱讀器念出來 -->
   <p aria-live="polite">
-    @if (!q()) {
+    @if (q(); as q) {
+      @if (q.tries) {
+        <span class="retry">再想想 🤔</span>
+      }
+    } @else {
       @if (s.finished()) {
         {{ result() }}
       } @else if (msg() && doneN()) {
-        {{ msg() }}
+        <!-- 每答對一題重建一次，彈跳和 ⭐ 才會重播 -->
+        @for (n of [doneN()]; track n) {
+          <span class="yay">{{ msg() }}<span class="star" aria-hidden="true">⭐</span></span>
+        }
       } @else if (s.makeup()) {
         回去補答漏掉的題目 🔙
       } @else if (doneN()) {
