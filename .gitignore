@@ -20,3 +20,4 @@ dist/
 
 # Agent worktrees
 .claude/worktrees/
+.playwright-mcp/
