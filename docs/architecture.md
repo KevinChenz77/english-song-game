@@ -7,7 +7,7 @@
 ## 0. 設計審查後的 PO 決定（2026-11-01，已反映到下面各節）
 
 1. **歌詞和整句翻譯改從我們的後端拿**：`GET ${apiBaseUrl}/api/songs/{songId}/content` → `{ lrc, translations }`。前端不再呼叫 LRCLIB、MyMemory；`Lyrics`、`Translation` 服務取消，改為 `Api.content()`（§4）。家長在本機修改的翻譯仍存 `tr_<songId>`，**覆蓋**伺服器翻譯。歌詞與譯文不放進儲存庫任何檔案（版權＋公開 repo）。
-2. **填填看題目單字每首歌手動列**：`song.quiz = { normal: string[], hard: string[], expert: string[] }`（10／20／20 字）。出題規則見 §5.1（取代舊的規則推導）。
+2. **填填看題目單字每首歌手動列**：`song.quiz = { normal: string[], hard: string[], expert: string[] }`（10／18～20／18～20 字）。出題規則見 §5.1（取代舊的規則推導）。
    - ⚠️ `letitgo.json` 的 `quiz` 是**暫用清單**：用 legacy 規則對目前 LRCLIB 歌詞實際跑出來的字（含重複的 `go`、`let`），等教育顧問的正式清單替換。
 3. **名字長度**：小朋友名字、雲端存檔名字都是去空白後 **1～10 字**（`[...s].length`）。密碼 4～64 不變。
 4. **星星分歌顯示**（不再跨歌加總；`totalStars` 不搬）；**貼紙每首歌都能拿**：一首歌一個 🎤／👑／專屬貼紙，`kid.stickers` 可重複。
@@ -178,7 +178,7 @@ export interface Song {
   title: string; artist: string; from: string; emoji: string;
   videos: SongVideo[];             // 第一支為預設
   sticker: string;                 // 填填看「挑戰」全對的專屬貼紙
-  quiz: Record<QuizLevel, string[]>; // 每個難度手動列的題目單字（普通 10、挑戰 20、最難 20）
+  quiz: Record<QuizLevel, string[]>; // 每個難度手動列的題目單字（普通 10、挑戰 18～20、最難 18～20）
   dict?: Record<string, string>;   // 這首歌專用／覆蓋共用字典的解釋
 }
 // 歌詞與翻譯不在 Song 裡（版權），由 Api.content() 從後端拿
@@ -203,7 +203,7 @@ export interface SaveData { version: 1; savedAt: string; players: SavedPlayer[] 
 ```
 
 ### 5.1 填填看出題（PO 決定：每首歌手動列字）
-`song.quiz.normal`（10 字）／`hard`（20 字）／`expert`（20 字）由教育顧問挑。`core/game/quiz.ts` 的 `pickQuestions(lines, song.quiz[level])`：
+`song.quiz.normal`（10 字）／`hard`（18～20 字）／`expert`（18～20 字）由教育顧問挑。`core/game/quiz.ts` 的 `pickQuestions(lines, song.quiz[level])`：
 - 依清單順序，每個字找**第一句「包含這個字（`norm` 後整詞相同）、而且還沒被用過」**的歌詞出題；同一個字列兩次就會找兩句不同的。
 - 找不到就略過並 `console.warn`（所以題數可能少於清單字數，內容工程師看 console 修清單）。
 - 結果依句子順序排列。
@@ -225,6 +225,12 @@ public/songs/dict.json    # 共用字典
 理由：公開的靜態內容，不需權限；跟著前端版本發佈、走快取。加歌＝加 json＋改 index.json＋重新部署前端，**再**由內容工程師把歌詞與翻譯放進後端 content.db（`POST /api/admin/content`）。
 **歌詞與翻譯絕對不放進 `public/` 或任何 commit 的檔案。**
 > ponytail：index 只列 id、選歌時每首 json 都抓；超過幾十首再讓 index 帶卡片摘要。
+
+### 5.3.1 新增歌曲
+步驟清單、`<id>.json` 欄位說明、不能 commit 的東西：見 **[adding-a-song.md](adding-a-song.md)**。
+- 加歌只動資料：`public/songs/<id>.json`、`index.json`、`dict.json`＋重建上傳 content.db（**整檔替換，必須含所有歌**）。程式碼不得出現特定歌曲 id 或歌曲數量。
+- `core/songs-data.spec.ts` 檢查 index.json 裡每首歌（檔案、id、欄位、影片、題數、字典、貼紙不重複），`ng test` 不過不能合併。
+- 歌曲 id 上線後不能改名（進度 `kid.songs[id]`、`tr_<id>` 都用它當 key）。
 
 ### 5.4 存檔與匯入
 `core/game/save-data.ts`：`buildSave(kids)`（不含 id）、`cleanSave(data)`（不可信資料，格式錯回 null、丟掉怪的 songs／stickers）、`sameName(kids, name)`（去空白比對；後端名字不分大小寫，前端比對維持舊版的區分大小寫）。
