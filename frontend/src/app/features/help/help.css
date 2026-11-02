@@ -1,31 +1,48 @@
+/* 小朋友版：三張大玩法卡 */
+.modes {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--sp-4);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--sp-3);
+}
+.modes li {
+  background: var(--card);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-1);
+  padding: var(--sp-4);
+  text-align: center;
+}
+.modes .ico {
+  display: block;
+  font-size: var(--fs-hero);
+  line-height: 1;
+}
+.modes h2 {
+  font-size: var(--fs-xl);
+  margin: var(--sp-2) 0 var(--sp-1);
+}
+.modes p {
+  font-size: var(--fs-lg);
+  line-height: 1.5;
+  margin: 0;
+}
+
 .help {
   background: var(--card);
-  border-radius: 16px;
-  padding: 12px 16px;
-  margin-bottom: 16px;
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-1);
+  padding: var(--sp-3) var(--sp-4);
+  margin-bottom: var(--sp-4);
 }
 .help h2 {
-  font-size: 20px;
-  margin: 4px 0 8px;
+  font-size: var(--fs-lg);
+  margin: var(--sp-1) 0 var(--sp-2);
 }
-.help li {
-  margin: 8px 0;
-  line-height: 1.5;
-}
-.help table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 16px;
-}
-.help th,
-.help td {
-  border-bottom: 1px solid #eef4fa;
-  padding: 8px 6px;
-  text-align: left;
-}
-.help td:nth-child(2),
-.help th {
-  white-space: nowrap;
+.big-line {
+  font-size: var(--fs-lg);
+  margin: 0 0 var(--sp-3);
 }
 .help .grid {
   grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
@@ -34,7 +51,71 @@ app-song-card {
   cursor: default;
 }
 .cap {
-  font-size: 14px;
-  color: var(--muted);
-  margin-top: 6px;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  text-align: center;
+  margin-top: var(--sp-1);
+}
+
+/* 給家長看：預設收起 */
+.parent summary {
+  cursor: pointer;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--ink-2);
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+}
+.parent[open] summary {
+  color: var(--ink);
+}
+.parent h3 {
+  font-size: var(--fs-md);
+  margin: var(--sp-4) 0 var(--sp-2);
+}
+.parent p,
+.parent li {
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+.parent li {
+  margin: var(--sp-1) 0;
+}
+.parent table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+.parent th,
+.parent td {
+  border-bottom: 1px solid #eef4fa;
+  padding: var(--sp-2) 6px;
+  text-align: left;
+}
+.parent td:nth-child(2),
+.parent th {
+  white-space: nowrap;
+}
+
+/* 手機：表格一列變一張小卡（audit H2） */
+@media (max-width: 600px) {
+  .parent thead {
+    display: none;
+  }
+  .parent tr {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--sp-1) var(--sp-2);
+    padding: var(--sp-2) 0;
+    border-bottom: 1px solid #eef4fa;
+  }
+  .parent td {
+    border: 0;
+    padding: 0;
+  }
+  .parent td:first-child {
+    grid-column: 1 / -1;
+    font-weight: 700;
+  }
 }
