@@ -27,7 +27,12 @@ const jaNorm = (s: string) =>
     .replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60))
     .replace(/[\p{P}\p{S}\s]/gu, '');
 
-const jaSeg = new Intl.Segmenter('ja', { granularity: 'word' });
+/** 用到才建（舊瀏覽器沒有 Intl.Segmenter：退回空白切的段落，英文永遠不碰它）。 */
+let jaSeg: Intl.Segmenter | undefined;
+const jaWords = (p: string) =>
+  typeof Intl.Segmenter === 'function'
+    ? [...(jaSeg ??= new Intl.Segmenter('ja', { granularity: 'word' })).segment(p)].map((x) => x.segment)
+    : [p];
 
 export const LANGS: Record<string, Lang> = {
   en: {
@@ -48,7 +53,7 @@ export const LANGS: Record<string, Lang> = {
     split: (text) =>
       text
         .split(/\s+/)
-        .flatMap((p) => [...jaSeg.segment(p)].map((x) => x.segment))
+        .flatMap(jaWords)
         .map((s) => tag(s, 'ja')),
     norm: jaNorm,
     stop: new Set('は が を に へ で と も の や よ ね か な です ます だ た て'.split(' ')),
@@ -60,15 +65,21 @@ export const LANGS: Record<string, Lang> = {
   },
 };
 
-/** 每個語言 code 一份 { 字: 中文 }（共用字典已疊上 song.dict）。 */
+/** 每個語言 code 一份 { 字: 中文 }（歌曲語言那一份已疊上 song.dict）。 */
 export type Dicts = Record<string, Record<string, string>>;
 
 export const langOf = (s: Pick<Song, 'lang'>) => LANGS[s.lang ?? 'en'];
 export const tokLang = (t: Token, s: Pick<Song, 'lang'>) => (t.l ? LANGS[t.l] : langOf(s));
 
-/** 一個字（原文或題目字）的語言：符合別的語言的 match 就是那個語言，否則是歌曲語言。 */
-export const wordLang = (w: string, s: Pick<Song, 'lang'>) =>
-  Object.values(LANGS).find((L) => L !== langOf(s) && L.match?.test(w)) ?? langOf(s);
+/**
+ * 一個字（原文或題目字）的語言：歌曲語言的 match 認得就是歌曲語言（同樣是拉丁字母的語言不會搶走英文歌的字）；
+ * 否則符合別的語言的 match 就是那個語言；都不符合＝歌曲語言。
+ */
+export const wordLang = (w: string, s: Pick<Song, 'lang'>) => {
+  const own = langOf(s);
+  if (own.match?.test(w)) return own;
+  return Object.values(LANGS).find((L) => L !== own && L.match?.test(w)) ?? own;
+};
 
 /** 歌詞填 tokens（後端給 tokens 是第一期的事；現在一律用歌曲語言的 split）。 */
 export const tokenize = (lines: LrcLine[], s: Pick<Song, 'lang'>): LyricLine[] =>

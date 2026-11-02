@@ -33,6 +33,12 @@ describe('parseLrc', () => {
     expect(l.stamps!.map((s) => s.at)).toEqual([0, 2, 3]);
   });
 
+  it('格式不對的 <…> 不當成時間，留在文字裡', () => {
+    const [l] = parseLrc('[00:01] red <1:2.> fox');
+    expect(l.text).toBe('red <1:2.> fox');
+    expect(l).not.toHaveProperty('stamps');
+  });
+
   it('只有逐字時間沒有字的行略過；一般 LRC 沒有 stamps', () => {
     expect(parseLrc('[00:01]<00:01.00> <00:02.00>')).toEqual([]);
     expect(parseLrc('[00:01] a')[0]).not.toHaveProperty('stamps');

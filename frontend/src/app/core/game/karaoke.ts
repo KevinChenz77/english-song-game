@@ -19,8 +19,14 @@ export function karaokeTimes(line: LyricLine, song: Pick<Song, 'lang'>): number[
     if (i >= 0) p = i + t.s.length;
     return i >= 0 ? i : p;
   });
-  const anchors = [...(line.stamps ?? [])];
-  if (!anchors.length || anchors[0].at > 0) anchors.unshift({ at: 0, t: line.t });
+  // stamps 不可信（手敲／外部檔）：時間夾在這句裡，只留 at 和 t 都嚴格遞增的
+  const raw = (line.stamps ?? []).map((s) => ({ at: s.at, t: Math.min(Math.max(s.t, line.t), line.end) }));
+  if (!raw.length || raw[0].at > 0) raw.unshift({ at: 0, t: line.t });
+  const anchors: typeof raw = [];
+  for (const s of raw) {
+    const p = anchors.at(-1);
+    if (!p || (s.at > p.at && s.t > p.t)) anchors.push(s);
+  }
   const out: number[] = [];
   anchors.forEach((a, j) => {
     const next = anchors[j + 1];

@@ -46,7 +46,7 @@ async function setup(level: 'normal' | 'expert' = 'normal') {
     q(1, 3, 'boat', ['boat', 'fox', 'cat']),
   ]);
   const f = TestBed.createComponent(QuizPanel);
-  // Play 傳進來的字典＝共用字典疊上 song.dict
+  // Play 傳進來的字典＝共用字典，歌曲語言那一份疊上 song.dict
   f.componentRef.setInput('dicts', { en: { fox: '狐狸', cat: '貓（動物）', boat: '船' } });
   await f.whenStable();
   const el: HTMLElement = f.nativeElement;

@@ -78,11 +78,12 @@ export class Play {
     defaultValue: {},
   });
 
-  /** 每個語言：共用字典疊上這首歌的 dict。 */
+  /** 每個語言的共用字典；這首歌的 dict 只疊在歌曲語言那一份上。 */
   protected readonly dicts = computed<Dicts>(() => {
-    const own = this.session.song()?.dict;
+    const s = this.session.song();
+    const own = s ? langOf(s).code : '';
     return Object.fromEntries(
-      Object.entries(this.sharedDicts.value()).map(([c, d]) => [c, { ...d, ...own }]),
+      Object.entries(this.sharedDicts.value()).map(([c, d]) => [c, c === own ? { ...d, ...s?.dict } : d]),
     );
   });
 

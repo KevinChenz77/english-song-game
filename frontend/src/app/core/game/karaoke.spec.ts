@@ -35,6 +35,24 @@ describe('karaokeTimes', () => {
     close(karaokeTimes(en('red fox', 10, 20, [{ at: 4, t: 13 }]), {}), [10, 13]);
   });
 
+  it('時間倒退的 stamp 丟掉', () => {
+    const l = en('red fox runs', 10, 20, [
+      { at: 0, t: 10 },
+      { at: 4, t: 12 },
+      { at: 8, t: 11 },
+    ]);
+    // fox、runs 同一段（最後一段照 A：2 × 0.45）
+    close(karaokeTimes(l, {}), [10, 12, 12.45]);
+  });
+
+  it('超過句尾的 stamp 夾到 end', () => {
+    const l = en('red fox runs', 10, 14, [
+      { at: 0, t: 10 },
+      { at: 4, t: 30 },
+    ]);
+    close(karaokeTimes(l, {}), [10, 14, 14]);
+  });
+
   it('日文 token 用音拍（小寫假名不算），英文 token 用英文音節', () => {
     const tokens: Token[] = [{ s: 'きょう' }, { s: 'は' }, { s: 'happy', l: 'en' }];
     const l: LyricLine = { t: 0, end: 10, text: 'きょうは happy', tokens };

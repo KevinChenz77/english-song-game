@@ -13,7 +13,7 @@ export function parseLrc(s: string): LrcLine[] {
     if (!m) continue;
     let raw = '';
     const stamps: { at: number; t: number }[] = [];
-    for (const part of m[3].split(/(<\d+:[\d.]+>)/)) {
+    for (const part of m[3].split(/(<\d+:\d+(?:\.\d+)?>)/)) {
       const st = part.match(/^<(\d+):(\d+(?:\.\d+)?)>$/);
       if (st) stamps.push({ at: raw.length, t: sec(st[1], st[2]) });
       else raw += part;

@@ -23,7 +23,7 @@ function quizProblems(song: Song, dicts: Dicts): string[] {
     for (const w of words) {
       const L = wordLang(w, song);
       if (L.norm(w) !== w) out.push(`${level}: ${w} 要寫成 ${L.norm(w)}`);
-      else if (!lookup(w, { ...dicts[L.code], ...song.dict }, L.forms))
+      else if (!lookup(w, { ...dicts[L.code], ...(L === langOf(song) ? song.dict : {}) }, L.forms))
         out.push(`${level}: ${w} 沒有中文（加到 ${dictFile(L.code)}.json 或這首歌的 dict）`);
     }
   }

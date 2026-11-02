@@ -21,7 +21,7 @@ import { Token } from '../../core/models/song.model';
   styleUrl: './lyrics-panel.css',
 })
 export class LyricsPanel {
-  /** 每個語言的共用字典（已疊上 song.dict）。 */
+  /** 每個語言的共用字典（歌曲語言那一份已疊上 song.dict）。 */
   readonly dicts = input.required<Dicts>();
   protected readonly session = inject(PlaySession);
   private readonly player = inject(YoutubePlayer);

@@ -27,6 +27,28 @@ describe('LANGS / tokLang', () => {
     expect(wordLang('fox', {})).toBe(LANGS['en']);
   });
 
+  it('wordLang：歌曲語言的 match 優先（假的拉丁字母語言不會搶英文歌的字）', () => {
+    LANGS['xx'] = { ...LANGS['en'], code: 'xx' };
+    try {
+      expect(wordLang('fox', {})).toBe(LANGS['en']);
+      expect(wordLang('fox', { lang: 'xx' })).toBe(LANGS['xx']);
+      expect(LANGS['en'].split('red fox')).toEqual([{ s: 'red' }, { s: 'fox' }]);
+    } finally {
+      delete LANGS['xx'];
+    }
+  });
+
+  it('沒有 Intl.Segmenter（舊瀏覽器）：ja 退回空白切，en 不受影響', () => {
+    const seg = Intl.Segmenter;
+    Reflect.set(Intl, 'Segmenter', undefined);
+    try {
+      expect(LANGS['ja'].split('ねこが いる')).toEqual([{ s: 'ねこが' }, { s: 'いる' }]);
+      expect(LANGS['en'].split('red fox')).toEqual([{ s: 'red' }, { s: 'fox' }]);
+    } finally {
+      Reflect.set(Intl, 'Segmenter', seg);
+    }
+  });
+
   it('ja norm：NFKC、片假名轉平假名、去標點', () => {
     expect(LANGS['ja'].norm('ネコ、！')).toBe('ねこ');
     expect(LANGS['ja'].norm('ＡＢ')).toBe('ab');

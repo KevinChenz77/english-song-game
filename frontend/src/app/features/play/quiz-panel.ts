@@ -56,7 +56,7 @@ const LEVELS = (
   styleUrl: './quiz-panel.css',
 })
 export class QuizPanel {
-  /** 每個語言的共用字典（已疊上 song.dict）。 */
+  /** 每個語言的共用字典（歌曲語言那一份已疊上 song.dict）。 */
   readonly dicts = input.required<Dicts>();
   protected readonly s = inject(PlaySession);
 

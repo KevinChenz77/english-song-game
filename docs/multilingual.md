@@ -300,7 +300,10 @@ LANGS = {
 > 第 0 步實作備註（`feature/ml-step0`）：
 > - `Lang` 只放了第 0 步用得到的欄位（`code`、`match`、`split`、`norm`、`stop`、`forms`、`expert`、`quizRange`、`units`）；`name`、`spaced`、`reading`、`dictAudio`、`tts`、`asr` 由用到的分支自己加（ja 的值照 §3 表）。
 > - `parseLrc` 回 `LrcLine`（沒有 tokens）；`LyricLine extends LrcLine` 多 `tokens`，由 `tokenize(lines, song)`（`core/lang.ts`）在 `PlaySession.open()` 填。測試直接放 `session.lines` 時也用 `tokenize`。後端 `tokens` 欄位還沒讀（第一期 `ml-pipeline` 上線後在 `tokenize` 優先用它）。
-> - `wordLang(w, song)`：只有字串（題目字、選項）時的語言規則（符合別的語言 `match` 就是那個語言），`split` 標 `l`、`quiz-panel` 查中文、`songs-data.spec.ts` 都用它。
+> - `song.dict` 只疊在**歌曲語言**的那份字典上（不是每個語言都疊）；歌裡外語字的解釋放 `dict.<那個語言>.json`。
+> - 逐字時間不可信：`karaokeTimes` 先把每個 stamp 的時間夾在 `[t, end]`，只留 `at`、`t` 都嚴格遞增的；`parseLrc` 只認格式正確的 `<mm:ss(.xx)>`。
+> - `Intl.Segmenter` 只在 ja 保底斷詞時才建立，沒有就退回空白切（舊瀏覽器上英文不受影響）。
+> - `wordLang(w, song)`：只有字串（題目字、選項）時的語言規則（歌曲語言的 `match` 認得就是歌曲語言；否則符合別的語言 `match` 就是那個語言），`split` 標 `l`、`quiz-panel` 查中文、`songs-data.spec.ts` 都用它。
 > - `lookup(w, dict, forms = enForms)`：第三個參數是語言的 `forms`（英文預設，`text.spec.ts` 不動）。
 > - `tapWord(t: Token)`；`popWord` 存 `{ ...t, s: norm 過 }`。唱唱看的「要多練的字」仍是整句英文評分出來的字串，用歌曲語言的 `norm`／`stop`，第二期再改。
 > - `Pronunciation.say/prefetch` 仍收字串、只查英文字典（第一期 `ml-quiz-tts` 改）。
