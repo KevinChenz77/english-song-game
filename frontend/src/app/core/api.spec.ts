@@ -69,22 +69,42 @@ describe('Api', () => {
     expect(c.translations).toEqual({ a: '甲', b: '家長改的' });
   });
 
-  it('content：後端 tokens 陣列 → Token（null 省略、壞的丟掉）；沒有 tokens 欄位 → undefined', async () => {
+  it('content：後端 tokens 陣列 → Token（null 省略、不認得的語言丟 l）；一個 token 壞掉／接不回原句／太長 → 整句不放；沒有 tokens 欄位 → undefined', async () => {
     // 自編的字（不是歌詞）
+    const long = 'あ'.repeat(65);
     const p = api.content('j');
     http.expectOne(`${BASE}/api/songs/j/content`).flush({
       ok: true,
-      lrc: '[00:01.00] 山へhappy',
+      lrc: '[00:01.00] 山へhappy go',
       translations: {},
       tokens: {
-        '山へhappy': [['山', 'やま', 'yama'], ['へ', null, 'e'], ['happy', null, null, 'en'], [null], 'x', ['go', null, null, 'zz']],
+        '山へhappy go': [
+          ['山', 'やま', 'yama'],
+          ['へ', null, 'e'],
+          ['happy', null, null, 'en'],
+          ['go', null, null, 'zz'],
+        ],
+        山へ: [['山', 'やま'], [null]], // 有一個壞的
+        川へ: [['川', 'かわ'], 'x'],
+        海へ: [['海', 7]], // 讀音不是字串
+        空へ: [['空']], // 接不回原句
+        [long]: [[long]], // 太長
+        toString: [['toString']],
         bad: 'x',
         empty: [],
       },
     });
-    expect((await p).tokens).toEqual({
-      '山へhappy': [{ s: '山', r: 'やま', ro: 'yama' }, { s: 'へ', ro: 'e' }, { s: 'happy', l: 'en' }, { s: 'go' }],
+    const t = (await p).tokens!;
+    expect({ ...t }).toEqual({
+      '山へhappy go': [
+        { s: '山', r: 'やま', ro: 'yama' },
+        { s: 'へ', ro: 'e' },
+        { s: 'happy', l: 'en' },
+        { s: 'go' },
+      ],
+      toString: [{ s: 'toString' }],
     });
+    expect(Object.getPrototypeOf(t)).toBeNull();
     const p2 = api.content('e');
     http.expectOne(`${BASE}/api/songs/e/content`).flush({ ok: true, lrc: '[00:01.00] a', translations: {} });
     expect((await p2).tokens).toBeUndefined();

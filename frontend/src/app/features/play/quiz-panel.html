@@ -5,15 +5,13 @@
   }
   @if (q(); as q) {
     <p>空格裡是哪個字？</p>
-    <div class="sent">
+    <div class="sent" [attr.lang]="lang().code">
       @for (tok of words(); track $index) {
         @if ($index === q.k) {
           <span class="blank" aria-hidden="true">{{ '＿'.repeat(tok.s.length) }}</span
-          ><span class="sr-only">空格</span>
-        } @else {
-          {{ tok.s }}
-        }
-        {{ ' ' }}
+          ><span class="sr-only" lang="zh-Hant">空格</span>
+        } @else {{{ tok.s }}}@if (lang().spaced) {{{ ' ' }}}
+        <!-- 不留空白：日文 token 之間不能有空格 -->
       }
     </div>
     <div class="zhq">{{ s.translations()[s.lines()[q.i].text] }}</div>
@@ -45,7 +43,7 @@
     } @else {
       @if (listen()) {
         <!-- 點擊當下同步唸（iOS 擋掉停下來時的自動發音就靠它） -->
-        <button type="button" class="hear" aria-label="再聽一次這個字" (click)="s.sayAnswer(q)">🔊 再聽一次</button>
+        <button type="button" class="hear" aria-label="聽這個字的發音" (click)="s.sayAnswer(q)">🔊 聽這個字</button>
       }
       <div class="opts">
         @for (w of q.opts; track w) {
@@ -56,7 +54,7 @@
             [disabled]="wrong().has(w)"
             (click)="choose(q, w)"
           >
-            <b>{{ w }}</b>
+            <b [attr.lang]="optLang(w)">{{ show(q, w) }}</b>
             <!-- 聽發音選字：選項只有原文，沒有中文 -->
             @if (!listen()) {
               <small>{{ zh(w) }}</small>

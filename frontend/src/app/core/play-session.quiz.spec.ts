@@ -135,6 +135,14 @@ describe('PlaySession 填填看', () => {
     expect(say.mock.calls[0][0]).toEqual({ s: '猫', r: 'ねこ' });
     expect(say.mock.calls[0][1].code).toBe('ja');
 
+    // 🔁 再聽一次（jumpTo）：重播到句尾停下時再唸一次；題目畫面不消失（active 不清）
+    say.mockClear();
+    s.jumpTo((s.questions() as Question[])[0]);
+    expect(s.active()).toBe(0);
+    s.onTick(t);
+    s.onTick(t + 0.1);
+    expect(say).toHaveBeenCalledTimes(1);
+
     say.mockClear();
     s.song.set({ id: 'demo', sticker: '❄️' } as Song);
     s.questions.set([q(0, 'fox')]);

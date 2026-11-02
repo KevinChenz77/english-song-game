@@ -13,6 +13,7 @@ export interface Lang {
   match?: RegExp; // 這個語言的字出現在別的語言的歌裡時怎麼認
   split(text: string): Token[]; // 後端沒給 tokens 時的斷詞
   norm(s: string): string; // 比對／查字典的 key
+  show(s: string): string; // 顯示用（小視窗、選項）：en 同 norm；ja 保留片假名／漢字，只去標點空白
   stop: ReadonlySet<string>; // 不放進單字 chip、不列為「要多練」
   forms(w: string): string[]; // 查字典依序試的字形
   expert: 'typed' | 'listen'; // 填填看「最難」的玩法
@@ -48,11 +49,11 @@ export const LANGS: Record<string, Lang> = {
     match: /^[A-Za-z][A-Za-z'’]*$/,
     split: (text) => text.split(/\s+/).map((s) => tag(s, 'en')),
     norm,
+    show: norm,
     stop: STOP,
     forms: enForms,
     expert: 'typed',
     quizRange: { normal: [10, 10], hard: [18, 20], expert: [18, 20] },
-    // ponytail：母音群數粗估音節（字尾單獨的 e 不算），夠用來分配時間
     dictAudio: true,
     // macOS / iOS 的第一個英文聲音常是 Albert、Bubbles 這類趣味機器人聲，要挑自然的
     tts: {
@@ -60,6 +61,7 @@ export const LANGS: Record<string, Lang> = {
       good: /premium|enhanced|natural|neural|google us english|samantha|ava|allison|aria|jenny|zoe/i,
       rate: 0.8,
     },
+    // ponytail：母音群數粗估音節（字尾單獨的 e 不算），夠用來分配時間
     units: (t) => Math.max(1, (norm(t.s).replace(/([^aeiouy])e$/, '$1').match(/[aeiouy]+/g) ?? []).length),
   },
   ja: {
@@ -74,6 +76,7 @@ export const LANGS: Record<string, Lang> = {
         .flatMap(jaWords)
         .map((s) => tag(s, 'ja')),
     norm: jaNorm,
+    show: (s) => s.normalize('NFKC').replace(/[\p{P}\p{S}\s]/gu, ''),
     stop: new Set('は が を に へ で と も の や よ ね か な です ます だ た て'.split(' ')),
     forms: (w) => [w],
     expert: 'listen',
@@ -106,7 +109,11 @@ export const tokenize = (
   lines: LrcLine[],
   s: Pick<Song, 'lang'>,
   server?: Record<string, Token[]>,
-): LyricLine[] => lines.map((l) => ({ ...l, tokens: server?.[l.text] ?? langOf(s).split(l.text) }));
+): LyricLine[] =>
+  lines.map((l) => ({
+    ...l,
+    tokens: (server && Object.hasOwn(server, l.text) && server[l.text]) || langOf(s).split(l.text),
+  }));
 
 /** split 用：外語 token 標 l。 */
 const tag = (s: string, code: string): Token => {

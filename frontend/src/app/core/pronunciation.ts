@@ -1,6 +1,6 @@
 import { Service } from '@angular/core';
 import { load, save } from './storage';
-import { LANGS, Lang } from './lang';
+import { Lang } from './lang';
 import { Token } from './models/song.model';
 
 const FUNNY_VOICES =
@@ -41,13 +41,12 @@ export class Pronunciation {
   }
 
   /**
-   * 唸一個字（s 是 norm 過的）；L＝這個 token 的語言（tokLang），沒給＝英文。
+   * 唸一個 token；L＝這個 token 的語言（tokLang）。dictAudio 語言用 s 查字典（要 norm 過）。
    * 點擊時同步呼叫：快取裡有、或直接 TTS 時當下就唸。
    */
-  say(t: Token | string, L: Lang = LANGS['en']): void {
-    const tok = typeof t === 'string' ? { s: t } : t;
-    if (!L.dictAudio) return this.speak(tok.r ?? tok.s, L);
-    const w = tok.s;
+  say(t: Token, L: Lang): void {
+    if (!L.dictAudio) return this.speak(t.r ?? t.s, L);
+    const w = t.s;
     if (Object.hasOwn(this.aud, w)) return this.playUrl(w, this.aud[w], L);
     void this.url(w).then((u) => this.playUrl(w, u, L));
   }

@@ -200,11 +200,28 @@ describe('QuizPanel 最難聽發音選字（ja）', () => {
     s.active.set(0);
     await f.whenStable();
     const hear = btn('🔊');
-    expect(hear.textContent).toContain('再聽一次');
+    expect(hear.textContent).toContain('聽這個字');
     hear.click();
     expect(say).toHaveBeenCalledTimes(1); // 同一個 click 裡，沒有等 Promise
     expect(say.mock.calls[0][0]).toEqual({ s: '猫', r: 'ねこ' });
     expect(say.mock.calls[0][1].code).toBe('ja');
+  });
+
+  it('選項顯示歌詞裡的字形（片假名不變平假名）；句子不插空白、標 lang', async () => {
+    const { s, f, el } = await setupJa();
+    // 自編的字：答案ネコ（norm＝ねこ），干擾字いぬ在歌詞裡、とり不在
+    s.questions.update((qs) => [
+      { ...qs[0], w: 'ねこ', opts: ['ねこ', 'いぬ', 'とり'], tok: { s: 'ネコ' } },
+      qs[1],
+    ]);
+    s.active.set(0);
+    await f.whenStable();
+    const opts = [...el.querySelectorAll('.opts b')];
+    expect(opts.map((b) => b.textContent!.trim())).toEqual(['ネコ', 'いぬ', 'とり']);
+    expect(opts.map((b) => b.getAttribute('lang'))).toEqual(['ja', 'ja', 'ja']);
+    const sent = el.querySelector('.sent')!;
+    expect(sent.getAttribute('lang')).toBe('ja');
+    expect(sent.textContent!.replace(/\s+$/, '')).not.toMatch(/しろい\s/);
   });
 
   it('日文歌裡的英文 token：🔊 走英文', async () => {

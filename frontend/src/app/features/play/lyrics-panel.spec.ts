@@ -116,6 +116,17 @@ describe('LyricsPanel 日文讀音', () => {
     expect(rts()).toEqual(['やま']);
   });
 
+  it('localStorage reading 被改壞（toString、亂字）→ 平假名，切換照常', () => {
+    for (const bad of ['"toString"', '"x"', '7']) {
+      localStorage.setItem('reading', bad);
+      TestBed.resetTestingModule();
+      const r = TestBed.inject(Reading);
+      expect(r.mode()).toBe('hira');
+      r.next();
+      expect(r.mode()).toBe('romaji');
+    }
+  });
+
   it('切換存在 localStorage reading（每台裝置記住）', async () => {
     const { f, toggle } = await setupJa();
     toggle.click();
