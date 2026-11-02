@@ -3,7 +3,8 @@ import { Service, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { APP_CONFIG } from './app-config';
 import { SaveData } from './models/save-data.model';
-import { SongContent } from './models/song.model';
+import { SongContent, Token } from './models/song.model';
+import { LANGS } from './lang';
 import { parseLrc } from './game/lrc';
 import { localTranslations } from './translations';
 
@@ -22,6 +23,29 @@ export const LYRICS_MISSING = '這首歌的歌詞還沒準備好 😢';
 export const cloudMessage = (kind: 'save' | 'load', status: number) => MSG[kind][status] || NET_ERR;
 
 const status = (e: unknown) => (e instanceof HttpErrorResponse ? e.status : 0);
+
+const str = (v: unknown) => (typeof v === 'string' && v ? v : undefined);
+
+/** 後端 tokens：{ 原句: [[s, r?, ro?, l?], ...] }（後面的 null 省略）→ Token；壞掉的 token／不認得的語言丟掉，空的句子不放（前端自己 split）。 */
+function toTokens(raw: unknown): Record<string, Token[]> | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const out: Record<string, Token[]> = {};
+  for (const [line, arr] of Object.entries(raw)) {
+    if (!Array.isArray(arr)) continue;
+    const toks = arr.flatMap((a): Token[] => {
+      const s = Array.isArray(a) ? str(a[0]) : undefined;
+      if (!s) return [];
+      const t: Token = { s };
+      const r = str(a[1]), ro = str(a[2]), l = str(a[3]);
+      if (r) t.r = r;
+      if (ro) t.ro = ro;
+      if (l && l in LANGS) t.l = l;
+      return [t];
+    });
+    if (toks.length) out[line] = toks;
+  }
+  return out;
+}
 
 /** 後端 API。失敗一律丟 Error，message 是可直接顯示的中文。 */
 @Service()
@@ -47,7 +71,7 @@ export class Api {
 
   /** 歌詞＋整句中文；本機家長修改（tr_<songId>）覆蓋伺服器的翻譯。 */
   async content(songId: string): Promise<SongContent> {
-    let r: { lrc: string; translations: Record<string, string> };
+    let r: { lrc: string; translations: Record<string, string>; tokens?: unknown };
     try {
       r = await firstValueFrom(this.http.get<typeof r>(`${this.base}/api/songs/${encodeURIComponent(songId)}/content`));
     } catch (e) {
@@ -55,6 +79,6 @@ export class Api {
     }
     const lines = parseLrc(r.lrc ?? '');
     if (!lines.length) throw new Error(LYRICS_MISSING);
-    return { lines, translations: { ...r.translations, ...localTranslations(songId) } };
+    return { lines, translations: { ...r.translations, ...localTranslations(songId) }, tokens: toTokens(r.tokens) };
   }
 }

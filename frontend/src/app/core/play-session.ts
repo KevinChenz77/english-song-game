@@ -91,12 +91,18 @@ export class PlaySession {
   private prevLine = -1; // onTick 上一次的目前句（記 heard 用；拖進度條跳太多不算）
 
   /** 開新的一局（E）。換了歌：videoIndex 歸 0；offset 讀 off_<videoId> 或預設。mode/quizLevel/singAll 沿用。依歌曲語言填 tokens。 */
-  open(kidId: number, song: Song, lines: LrcLine[], translations: Record<string, string>): void {
+  open(
+    kidId: number,
+    song: Song,
+    lines: LrcLine[],
+    translations: Record<string, string>,
+    tokens?: Record<string, Token[]>, // 後端的斷詞＋讀音（SongContent.tokens）
+  ): void {
     this.closePop(); // 上一局留下的單字小視窗不要帶過來
     if (this.song()?.id !== song.id) this.videoIndex.set(0);
     this.kidId.set(kidId);
     this.song.set(song);
-    this.lines.set(tokenize(lines, song));
+    this.lines.set(tokenize(lines, song, tokens));
     this.translations.set(translations);
     this.parentOpen.set(false); // 新畫面的 <details> 是關的
     this.offset.set(this.savedOffset());

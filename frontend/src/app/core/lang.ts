@@ -90,9 +90,12 @@ export const wordLang = (w: string, s: Pick<Song, 'lang'>) => {
   return Object.values(LANGS).find((L) => L !== own && L.match?.test(w)) ?? own;
 };
 
-/** 歌詞填 tokens（後端給 tokens 是第一期的事；現在一律用歌曲語言的 split）。 */
-export const tokenize = (lines: LrcLine[], s: Pick<Song, 'lang'>): LyricLine[] =>
-  lines.map((l) => ({ ...l, tokens: langOf(s).split(l.text) }));
+/** 歌詞填 tokens：後端有給這句的 tokens 就用它，沒有就用歌曲語言的 split。 */
+export const tokenize = (
+  lines: LrcLine[],
+  s: Pick<Song, 'lang'>,
+  server?: Record<string, Token[]>,
+): LyricLine[] => lines.map((l) => ({ ...l, tokens: server?.[l.text] ?? langOf(s).split(l.text) }));
 
 /** split 用：外語 token 標 l。 */
 const tag = (s: string, code: string): Token => {
