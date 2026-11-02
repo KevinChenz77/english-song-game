@@ -146,7 +146,8 @@ button.zh.empty {
   padding: 4px 14px;
   margin-bottom: 8px;
   border-radius: 999px;
-  background: #eef6ff;
+  background: var(--card);
+  border: 2px solid var(--line-strong, var(--accent));
   color: var(--ink);
   font-size: 17px;
 }
@@ -157,8 +158,7 @@ button.zh.empty {
   color: var(--accent);
 }
 .reading[aria-pressed='false'] {
-  background: transparent;
-  border: 2px solid var(--line-strong, var(--accent));
+  border-style: dashed;
 }
 /* 有 ruby 的語言：固定較高的行距，切換讀音／目前句都不會重新排版 */
 .en.ruby {

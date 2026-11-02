@@ -13,7 +13,7 @@ import { langOf } from '../core/lang';
       <span class="lang">{{ L.name }}</span>
     }
     <div class="big">{{ song().emoji }}</div>
-    <b class="title">{{ song().title }}</b>
+    <b class="title" [attr.lang]="lang()?.code">{{ song().title }}</b>
     <div class="from">{{ song().from }}</div>
     <div class="stars">{{ stars() }}</div>
   `,
