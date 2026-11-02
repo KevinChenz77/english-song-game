@@ -5,7 +5,9 @@ and optionally "lang" (default "en") and "readings" ({word: hiragana}, fixes wro
 For every song: take the LRC from data/lrc/<id>.lrc if it exists (overrides LRCLIB, may be Enhanced LRC),
 otherwise fetch synced LRC from LRCLIB; translate each unique line to Traditional Chinese via MyMemory
 (<lang>|zh-TW); for languages with an analyzer (ja) store per-line tokens. Existing translations/tokens are reused
-(tokens of lines containing a "readings" word are recomputed).
+(tokens of lines containing a "readings" word are recomputed). To force re-tokenising a song (e.g. after upgrading
+fugashi/unidic), delete its rows first, then rebuild it:
+    sqlite3 data/content.db "DELETE FROM tokens WHERE song_id = '<id>'" && python3.12 backend/tools/build_content.py <id>
 Upload replaces the whole server DB, so build into the same DB every time: song_id args only limit
 which songs are (re-)fetched, all other songs already in the DB are kept.
 English needs only the stdlib; Japanese songs need: pip install -r backend/tools/requirements-tools.txt
@@ -25,6 +27,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 SONGS_DIR = ROOT / "frontend/public/songs"
 LRC_DIR = ROOT / "data/lrc"
 LINE = re.compile(r"^\[(\d+):(\d+(?:\.\d+)?)\](.*)$", re.ASCII)  # same as frontend parseLrc
+SONG_ID = re.compile(r"^[a-z0-9-]{1,40}$", re.ASCII)  # same as the server's /api/songs/{song_id} pattern
 STAMP = re.compile(r"<\d+:\d+(?:\.\d+)?>", re.ASCII)  # Enhanced LRC word stamp, same as frontend parseLrc
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS songs (song_id TEXT PRIMARY KEY, lrc TEXT NOT NULL, updated_at TEXT NOT NULL);
@@ -139,13 +142,16 @@ def source_error(song):
 
 
 def song_lrc(sid, song, lrc_dir=LRC_DIR):
-    """(lrc, source): local data/lrc/<id>.lrc overrides LRCLIB for any song; localLrc songs require it."""
+    """(lrc, source): local data/lrc/<id>.lrc overrides LRCLIB for any song; localLrc songs require it.
+    Line endings become LF (frontend parseLrc splits on \\n only)."""
     local = lrc_dir / f"{sid}.lrc"
     if local.exists():
-        return local.read_text(encoding="utf-8"), "local"
-    if song.get("localLrc"):
+        lrc, src = local.read_bytes().decode("utf-8"), "local"
+    elif song.get("localLrc"):
         sys.exit(f"{sid}: localLrc but {local} is missing")
-    return get_json(f"https://lrclib.net/api/get/{song['lrclibId']}")["syncedLyrics"] or "", "lrclib"
+    else:
+        lrc, src = get_json(f"https://lrclib.net/api/get/{song['lrclibId']}")["syncedLyrics"] or "", "lrclib"
+    return lrc.replace("\r\n", "\n").replace("\r", "\n"), src
 
 
 def translate(text, lang):
@@ -158,6 +164,8 @@ def translate(text, lang):
 
 
 def build(db_path, ids):
+    if bad := [s for s in [*ids, *load_index()] if not isinstance(s, str) or not SONG_ID.fullmatch(s)]:
+        sys.exit(f"invalid song ids (must match {SONG_ID.pattern}): {bad}")
     db_path.parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(db_path)
     db.executescript(SCHEMA)
@@ -235,6 +243,8 @@ def check():
         (d / "t.lrc").write_text("[00:01.00]<00:01.00>blue <00:01.40>sky", encoding="utf-8")
         assert song_lrc("t", {"lrclibId": 1}, d) == ("[00:01.00]<00:01.00>blue <00:01.40>sky", "local")
         assert song_lrc("t", {"localLrc": True}, d)[1] == "local"
+        (d / "crlf.lrc").write_bytes(b"[00:01.00]blue sky\r\n[00:02.00]red fox\r[00:03.00]big boat\n")
+        assert song_lrc("crlf", {"localLrc": True}, d)[0] == "[00:01.00]blue sky\n[00:02.00]red fox\n[00:03.00]big boat\n"
         try:
             song_lrc("nofile", {"localLrc": True}, d)
             raise AssertionError("missing local lrc must fail")
@@ -244,8 +254,11 @@ def check():
     assert tag_foreign([["ねこ", None, "neko"], ["学校", "がっこう", "gakkou"], ["happy", None, "happy"], ["days,", None, "days"]], "ja") == \
         [["ねこ", None, "neko"], ["学校", "がっこう", "gakkou"], ["happy", None, None, "en"], ["days,", None, None, "en"]]
     assert tag_foreign([["happy", None, None]], "en") == [["happy"]]
+    assert [bool(SONG_ID.fullmatch(s)) for s in ("try-it", "a1", "Bad", "a_b", "../x", "a" * 41, "a" * 40, "a\n")] == \
+        [True, True, False, False, False, False, True, False]
     ids = load_index()
     for sid in ids:
+        assert isinstance(sid, str) and SONG_ID.fullmatch(sid), sid
         assert source_error(json.loads((SONGS_DIR / f"{sid}.json").read_text(encoding="utf-8"))) is None, sid
     try:
         _ja()

@@ -195,13 +195,24 @@ def test_content_tokens(monkeypatch):
     # 沒有 tokens 表（舊 db）→ 能上傳、不回 tokens
     assert admin(make_content_db({"plain": "red fox"})) == (200, {"ok": True, "songs": 1})
     assert "tokens" not in client.get("/api/songs/plain/content").json()
-    # tokens 表欄位不對 → 拒絕
-    bad = os.path.join(tempfile.mkdtemp(), "b.db")
-    with open(bad, "wb") as f:
-        f.write(make_content_db({"plain": "red fox"}))
-    db = sqlite3.connect(bad)
-    db.execute("CREATE TABLE tokens (song_id TEXT, words TEXT)")
-    db.commit()
-    db.close()
-    with open(bad, "rb") as f:
-        assert admin(f.read()) == (400, {"ok": False, "error": "bad_content"})
+    # tokens 表欄位不對、是 view、json 不合法或不是文字、line/song_id 不是文字 → 拒絕
+    cases = (
+        ["CREATE TABLE tokens (song_id TEXT, words TEXT)"],
+        ["CREATE VIEW tokens AS SELECT song_id, line, zh AS json FROM translations"],
+        ["CREATE TABLE tokens (song_id, line, json)", "INSERT INTO tokens VALUES ('plain', 'red fox', '[[\"red\"')"],
+        ["CREATE TABLE tokens (song_id, line, json)", "INSERT INTO tokens VALUES ('plain', 'red fox', 5)"],
+        ["CREATE TABLE tokens (song_id, line, json)", "INSERT INTO tokens VALUES ('plain', 7, '[]')"],
+        ["CREATE TABLE tokens (song_id, line, json)", "INSERT INTO tokens VALUES (3, 'red fox', '[]')"],
+    )
+    for sql in cases:
+        bad = os.path.join(tempfile.mkdtemp(), "b.db")
+        with open(bad, "wb") as f:
+            f.write(make_content_db({"plain": "red fox"}))
+        db = sqlite3.connect(bad)
+        for s in sql:
+            db.execute(s)
+        db.commit()
+        db.close()
+        with open(bad, "rb") as f:
+            assert admin(f.read()) == (400, {"ok": False, "error": "bad_content"}), sql
+    assert "tokens" not in client.get("/api/songs/plain/content").json()  # 被拒絕的上傳沒有替換

@@ -243,6 +243,12 @@ def replace_content(raw):
                 have = {r[1] for r in db.execute(f"PRAGMA table_info({table})")}
                 if (have or table in CONTENT_SCHEMA) and not cols <= have:
                     return None
+            kind = db.execute("SELECT type FROM sqlite_master WHERE name = 'tokens'").fetchone()
+            if kind and (kind[0] != "table" or db.execute(
+                "SELECT 1 FROM tokens WHERE typeof(json) != 'text' OR NOT json_valid(json)"
+                " OR typeof(line) != 'text' OR typeof(song_id) != 'text' LIMIT 1"
+            ).fetchone()):
+                return None  # 每列 json 都要是合法 JSON 文字，否則 GET content 會 500
             if db.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                 return None
             count = db.execute("SELECT COUNT(*) FROM songs").fetchone()[0]
