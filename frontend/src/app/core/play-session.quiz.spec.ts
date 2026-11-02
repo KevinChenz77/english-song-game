@@ -62,6 +62,19 @@ describe('PlaySession 填填看', () => {
     expect(player.play).toHaveBeenCalledTimes(1);
   });
 
+  it('補答中答對、還有漏的：跳到下一題那句（不是直接播放下去）', () => {
+    const { s, player } = setup();
+    s.finish(); // 兩題都漏了
+    expect(player.seek).toHaveBeenLastCalledWith(lines[0].t + 1 - 0.3);
+    player.seek.mockClear();
+    player.play.mockClear();
+    s.active.set(0);
+    s.answer('fox');
+    expect(player.seek).toHaveBeenCalledExactlyOnceWith(lines[2].t + 1 - 0.3);
+    expect(player.play).toHaveBeenCalledTimes(1);
+    expect(s.finished()).toBe(false);
+  });
+
   it('有漏答：finish 進入補答並跳回那句；補完全部一次答對才 earn', () => {
     const { s, player, rewards } = setup('hard');
     s.active.set(0);

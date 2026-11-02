@@ -87,11 +87,18 @@ describe('QuizPanel', () => {
     await f.whenStable();
     const inp = () => el.querySelector('input')!;
     expect(el.querySelector('.hint')!.textContent).toContain('b ＿ ＿ ＿ （4 個字母）船');
+    expect(el.querySelector('.sent')!.textContent).not.toContain('boat'); // 答案不在 DOM
+    expect(el.querySelector('.sent')!.textContent).toContain('空格');
     for (const w of ['ship', 'raft']) {
-      inp().value = w;
-      inp().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+      const old = inp();
+      old.value = w;
+      old.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+      await f.whenStable();
+      // 每次答錯都換一個新的輸入框（重新晃動、清空）
+      expect(inp()).not.toBe(old);
+      expect(inp().classList).toContain('wrong');
+      expect(inp().value).toBe('');
     }
-    await f.whenStable();
     expect(el.querySelector('.hint')!.textContent).toContain('答案是「boat」');
     inp().value = ' Boat ';
     inp().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));

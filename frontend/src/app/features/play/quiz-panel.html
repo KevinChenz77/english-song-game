@@ -1,11 +1,12 @@
 <div class="box">
-  <div>{{ label[s.quizLevel()] }}　第 {{ num() }} / {{ qs().length }} 題</div>
+  <div>{{ level().label }}　第 {{ num() }} / {{ qs().length }} 題</div>
   @if (q(); as q) {
     <p>空格裡是哪個字？</p>
     <div class="sent">
       @for (tok of words(); track $index) {
         @if ($index === q.k) {
-          <span class="blank" aria-label="空格">{{ tok }}</span>
+          <span class="blank" aria-hidden="true">{{ '＿'.repeat(tok.length) }}</span
+          ><span class="sr-only">空格</span>
         } @else {
           {{ tok }}
         }
@@ -21,20 +22,23 @@
           {{ q.w[0] }} {{ blanks(q.w) }}（{{ q.w.length }} 個字母）{{ zh(q.w) }}
         }
       </p>
-      <input
-        #inp
-        class="typein"
-        [class.wrong]="q.tries > 0"
-        aria-label="打出空格裡的字"
-        placeholder="打出空格裡的字"
-        autocapitalize="off"
-        autocomplete="off"
-        autocorrect="off"
-        spellcheck="false"
-        enterkeyhint="done"
-        (keydown.enter)="submit(q, inp)"
-      />
-      <button type="button" (click)="submit(q, inp)">確定</button>
+      <!-- 依 tries 重建輸入框：每次答錯都重新晃動、清空 -->
+      @for (t of [q.tries]; track t) {
+        <input
+          #inp
+          class="typein"
+          [class.wrong]="t > 0"
+          aria-label="打出空格裡的字"
+          placeholder="打出空格裡的字"
+          autocapitalize="off"
+          autocomplete="off"
+          autocorrect="off"
+          spellcheck="false"
+          enterkeyhint="done"
+          (keydown.enter)="submit(q, inp)"
+        />
+        <button type="button" (click)="submit(q, inp)">確定</button>
+      }
     } @else {
       <div class="opts">
         @for (w of q.opts; track w) {
@@ -51,11 +55,11 @@
         }
       </div>
     }
-    <button type="button" class="ghost" (click)="again(q)">🔁 再聽一次</button>
+    <button type="button" class="ghost" (click)="s.jumpTo(q)">🔁 再聽一次</button>
   } @else {
     @if (!doneN() || s.finished()) {
       <div class="modes">
-        @for (l of levels; track l) {
+        @for (l of keys; track l) {
           <button
             type="button"
             class="ghost"
@@ -63,12 +67,15 @@
             [attr.aria-pressed]="s.quizLevel() === l"
             (click)="setLevel(l)"
           >
-            {{ label[l] }}（{{ desc(l) }}）
+            {{ levels()[l].label }}（{{ levels()[l].desc }}）
           </button>
         }
       </div>
     }
-    <p>
+  }
+  <!-- 一直留在畫面上，回饋文字才會被螢幕閱讀器念出來 -->
+  <p aria-live="polite">
+    @if (!q()) {
       @if (s.finished()) {
         {{ result() }}
       } @else if (msg() && doneN()) {
@@ -80,6 +87,6 @@
       } @else {
         按 ▶ 播放，聽到空格那句時會停下來喔！
       }
-    </p>
-  }
+    }
+  </p>
 </div>

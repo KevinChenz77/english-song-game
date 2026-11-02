@@ -117,6 +117,7 @@ export class PlaySession {
     const qs = this.quizQs().map((x, k) => (k === n ? { ...x, done: true } : x));
     this.questions.set(qs);
     this.active.set(null);
+    // TODO(E/Pronunciation): say(q.w) synchronously here
     // 在點擊當下就播放，iOS 才不會擋
     const left = qs.find((x) => !x.done);
     if (!this.makeup()) this.player.play();
@@ -128,8 +129,8 @@ export class PlaySession {
     return this.mode() === 'quiz' ? (this.questions() as Question[]) : [];
   }
 
-  /** 跳回某題那句的開頭（補答用），同步 play()。 */
-  private jumpTo(q: Question): void {
+  /** 跳回某題那句的開頭（補答、🔁 再聽一次），點擊時同步呼叫，同步 play()。 */
+  jumpTo(q: Question): void {
     this.player.seek(this.lines()[q.i].t + this.offset() - 0.3);
     this.player.play();
   }
