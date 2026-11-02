@@ -2,8 +2,7 @@ import { LrcLine, LyricLine, QuizLevel, Song, Token } from './models/song.model'
 import { STOP, enForms, norm } from './game/text';
 
 /**
- * 每個語言的行為只在這裡（docs/multilingual.md §3）。第 0 步只放得到的欄位；
- * 讀音、TTS、ASR 等欄位由第一／二期的分支加。
+ * 每個語言的行為只在這裡（docs/multilingual.md §3）。
  */
 export interface Lang {
   code: string; // BCP 47：'en' | 'ja'；也用在 dict.<code>.json、[attr.lang]
@@ -21,6 +20,15 @@ export interface Lang {
   units(t: Token): number; // 卡拉 OK 權重：en 音節、ja 音拍
   dictAudio: boolean; // Free Dictionary 真人錄音（只有英文）
   tts: { lang: string; good: RegExp; rate: number }; // speechSynthesis：語言、好聽的聲音名單、速度
+  /** 唱唱看：Whisper 模型（跟歌曲語言）、固定的辨識語言、下載 MB（提示用）、評分單位、每句過關門檻、幻覺字串 */
+  asr: {
+    model: string;
+    language?: string;
+    mb: number;
+    unit: 'word' | 'char';
+    pass: number;
+    junk: RegExp;
+  };
 }
 
 const SMALL_KANA = /[ゃゅょぁぃぅぇぉゎ]/;
@@ -61,6 +69,13 @@ export const LANGS: Record<string, Lang> = {
       good: /premium|enhanced|natural|neural|google us english|samantha|ava|allison|aria|jenny|zoe/i,
       rate: 0.8,
     },
+    asr: {
+      model: 'onnx-community/whisper-tiny.en',
+      mb: 41,
+      unit: 'word',
+      pass: 0.7,
+      junk: /^(\[.*\]|\(.*\)|thank you\.?|you\.?|\.+)$/i, // Whisper 沒聽到東西時常冒出這些
+    },
     // ponytail：母音群數粗估音節（字尾單獨的 e 不算），夠用來分配時間
     units: (t) => Math.max(1, (norm(t.s).replace(/([^aeiouy])e$/, '$1').match(/[aeiouy]+/g) ?? []).length),
   },
@@ -83,6 +98,15 @@ export const LANGS: Record<string, Lang> = {
     quizRange: { normal: [6, 10], hard: [10, 20], expert: [10, 20] },
     dictAudio: false,
     tts: { lang: 'ja-JP', good: /kyoko|o-ren|otoya|hattori|premium|enhanced|nanami|google 日本語/i, rate: 0.8 },
+    asr: {
+      model: 'onnx-community/whisper-base', // spike：§6.1
+      language: 'japanese',
+      mb: 80,
+      unit: 'char',
+      pass: 0.6, // ponytail：調整用旋鈕，小朋友實際錄音後再調
+      // 沒聽到東西時 Whisper 常冒出 YouTube 字幕的固定句（實測靜音：「さて、この動画を見てくれてありがとう!」）
+      junk: /^(\[.*\]|\(.*\)|（.*）|おやすみなさい。?|[.。、…!！?？\s]+)$|ご視聴|チャンネル登録|動画を見て/,
+    },
     // 音拍：讀音的假名數，小寫的ゃゅょぁぃぅぇぉ不算（っ、ー、ん算一拍）
     units: (t) => Math.max(1, [...jaNorm(t.r ?? t.s)].filter((c) => !SMALL_KANA.test(c)).length),
   },

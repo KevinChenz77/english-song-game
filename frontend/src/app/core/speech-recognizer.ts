@@ -1,7 +1,10 @@
 import { Service, signal } from '@angular/core';
+import { LANGS, Lang } from './lang';
 
 /** 語音辨識 pipeline（transformers.js 的回傳型別只寫用得到的）。 */
-type Asr = (audio: Float32Array) => Promise<{ text: string }>;
+type Asr = ((audio: Float32Array, opts?: object) => Promise<{ text: string }>) & {
+  dispose?: () => Promise<void>;
+};
 
 // 變數＋@vite-ignore：不讓建置工具打包，執行期才從 CDN 載入（architecture §11 風險 1）
 const TRANSFORMERS_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.1/+esm';
@@ -23,6 +26,8 @@ export class SpeechRecognizer {
   private actx: AudioContext | null = null;
   private stopRec: (() => void) | null = null;
   private asr: Promise<Asr> | null = null;
+  private model = ''; // asr 是哪個模型
+  private gen = 0;
 
   /**
    * 開始錄音，回傳 16kHz 單聲道音訊；有聲音的部分太短（<0.4 秒）回傳 null（當成沒唸）。
@@ -103,56 +108,68 @@ export class SpeechRecognizer {
     this.stopRec?.();
   }
 
-  /** 載入 Whisper（切到唱唱看時呼叫，只載一次；失敗下次可重試）。含暖機。 */
-  load(): Promise<Asr> {
-    return (this.asr ??= (async () => {
-      const url = TRANSFORMERS_URL;
-      const { pipeline } = await import(/* @vite-ignore */ url);
+  /**
+   * 載入這個語言的 Whisper（切到唱唱看時呼叫；同一個模型只載一次，失敗下次可重試）。含暖機。
+   * 只留一個模型（iPad 記憶體）：換語言就丟掉舊的再載新的。
+   */
+  load(L: Lang): Promise<Asr> {
+    if (this.model === L.asr.model && this.asr) return this.asr;
+    const old = this.asr;
+    this.model = L.asr.model;
+    const gen = ++this.gen; // 載入中又換語言：舊的這次不再寫提示
+    const p: Promise<Asr> = (async () => {
+      await old?.then((a) => a.dispose?.()).catch(() => {}); // 先放掉舊模型的記憶體
+      if (this.gen !== gen) throw new Error('stale'); // 等的時候又換了語言：這次不用下載了
+      const pipeline = await this.pipelineFn();
       const files: Record<string, [number, number]> = {};
-      const asr: Asr = await pipeline(
-        'automatic-speech-recognition',
-        'onnx-community/whisper-tiny.en',
-        {
-          dtype: 'q8',
-          device: 'wasm',
-          progress_callback: (p: {
-            status: string;
-            file: string;
-            loaded: number;
-            total: number;
-          }) => {
-            if (p.status !== 'progress' || !p.total) return;
-            files[p.file] = [p.loaded, p.total];
-            const [l, t] = Object.values(files).reduce((a, [x, y]) => [a[0] + x, a[1] + y], [0, 0]);
-            this.note.set(
-              `語音模型下載中 ${Math.round((l / t) * 100)}%（只有第一次需要，約 41MB）`,
-            );
-          },
+      const asr: Asr = await pipeline('automatic-speech-recognition', L.asr.model, {
+        dtype: 'q8',
+        device: 'wasm',
+        progress_callback: (p: { status: string; file: string; loaded: number; total: number }) => {
+          if (p.status !== 'progress' || !p.total || this.gen !== gen) return;
+          files[p.file] = [p.loaded, p.total];
+          const [l, t] = Object.values(files).reduce((a, [x, y]) => [a[0] + x, a[1] + y], [0, 0]);
+          this.note.set(
+            `語音模型下載中 ${Math.round((l / t) * 100)}%（只有第一次需要，約 ${L.asr.mb}MB）`,
+          );
         },
-      );
-      this.note.set('語音模型準備中…');
-      await asr(new Float32Array(16000)); // 先暖機一次：第一次辨識要編譯 WASM，會慢好幾秒
-      this.note.set('');
+      });
+      if (this.gen === gen) this.note.set('語音模型準備中…');
+      await asr(new Float32Array(16000), opts(L)); // 先暖機一次：第一次辨識要編譯 WASM，會慢好幾秒
+      if (this.gen === gen) this.note.set('');
       return asr;
-    })().catch((e) => {
-      this.asr = null;
-      this.note.set('語音模型載入失敗，請確認網路後重新點「唱唱看」');
+    })();
+    return (this.asr = p.catch((e) => {
+      if (this.gen === gen) {
+        this.asr = null;
+        this.note.set('語音模型載入失敗，請確認網路後重新點「唱唱看」');
+      }
       throw e;
     }));
   }
 
-  /** 辨識 16kHz 音訊；沒聽到東西回傳 ''。 */
-  async transcribe(audio: Float32Array): Promise<string> {
+  /** transformers.js 的 pipeline()（測試換掉這個）。 */
+  protected async pipelineFn(): Promise<(...a: unknown[]) => Promise<Asr>> {
+    const url = TRANSFORMERS_URL;
+    return (await import(/* @vite-ignore */ url)).pipeline;
+  }
+
+  /** 辨識 16kHz 音訊（用這個語言的模型）；沒聽到東西回傳 ''。 */
+  async transcribe(audio: Float32Array, L: Lang): Promise<string> {
     // 前後補 0.5 秒靜音：錄音一開始就是說話聲時，Whisper 會漏掉第一個字
     const padded = new Float32Array(audio.length + 16000);
     padded.set(audio, 8000);
-    const t = (await (await this.load())(padded)).text.trim();
-    return isHallucination(t) ? '' : t;
+    const t = (await (await this.load(L))(padded, opts(L))).text.trim();
+    return isHallucination(t, L) ? '' : t;
   }
 }
 
-/** Whisper 沒聽到東西時常冒出這些。 */
-export const isHallucination = (t: string) => /^(\[.*\]|\(.*\)|thank you\.?|you\.?|\.+)$/i.test(t);
+/** 固定辨識語言（多語模型），避免小朋友口音被判成別的語言；英文模型不用給。 */
+const opts = (L: Lang) =>
+  L.asr.language ? { language: L.asr.language, task: 'transcribe' } : undefined;
+
+/** Whisper 沒聽到東西時常冒出這些（每個語言的 asr.junk）。 */
+export const isHallucination = (t: string, L: Lang = LANGS['en']) => L.asr.junk.test(t);
 
 async function to16k(buf: Float32Array, sr: number): Promise<Float32Array> {
   if (sr === 16000) return buf;

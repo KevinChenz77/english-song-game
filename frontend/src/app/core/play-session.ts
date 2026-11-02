@@ -4,7 +4,7 @@ import { Rewards } from './rewards';
 import { SpeechRecognizer } from './speech-recognizer';
 import { LrcLine, LyricLine, PlayMode, QuizLevel, Song, Token } from './models/song.model';
 import { Question, pickQuestions } from './game/quiz';
-import { ScoredWord, scoreLine } from './game/scoring';
+import { ScoredWord, isPractice, scoreChars, scoreLine, wordKey } from './game/scoring';
 import { langOf, tokLang, tokenize } from './lang';
 import { BackingTrack } from './backing-track';
 import { Pronunciation } from './pronunciation';
@@ -35,7 +35,7 @@ export interface SingSummary {
   passed: number;
   total: number;
   score: number;
-  missed: string[];
+  missed: Token[]; // 要多練的字（en：norm 過的字；ja：原本的 token，帶讀音）
 }
 
 /**
@@ -331,19 +331,17 @@ export class PlaySession {
     }
     this.finished.set(true);
     const song = this.song();
-    const L = langOf(song ?? {}); // ponytail：唱唱看評分還是整句英文規則，日文在第二期改
     const passed = qs.filter((q) => q.passed).length;
     const score = Math.round((passed / qs.length) * 100);
-    const missed = [
-      ...new Set(
-        qs.flatMap((q) =>
-          (q.result?.words ?? [])
-            .filter((w) => w.ok === 'miss')
-            .map((w) => L.norm(w.t))
-            .filter((w) => !L.stop.has(w)),
-        ),
-      ),
-    ].slice(0, 8);
+    const seen = new Set<string>();
+    const missed: Token[] = [];
+    for (const w of qs.flatMap((q) => q.result?.words ?? [])) {
+      const key = wordKey(w, song ?? {});
+      if (w.ok !== 'miss' || !isPractice(w, song ?? {}) || seen.has(key)) continue;
+      seen.add(key);
+      missed.push(w.tok ?? { s: key }); // en 照舊顯示 norm 過的字
+    }
+    missed.splice(8);
     this.singSummary.set({ passed, total: qs.length, score, missed });
     const kidId = this.kidId();
     if (kidId === null || !song) return;
@@ -361,6 +359,8 @@ export class PlaySession {
     if (idx === null || !stop || stop.state === 'rec' || stop.state === 'busy') return; // 連點不重複錄
     const run = ++this.singRun;
     const line = this.lines()[stop.i];
+    const song = this.song();
+    const L = langOf(song ?? {}); // 模型、評分、門檻跟歌曲語言
     this.pron.stop(); // 開始錄音前停掉單字發音
     this.patchStop(idx, { state: 'rec', msg: undefined });
     const rec = this.recognizer.record(onLevel); // 先開麥克風，再開伴奏，都在點擊當下
@@ -391,17 +391,20 @@ export class PlaySession {
     this.patchStop(idx, { state: 'busy' });
     let text: string;
     try {
-      text = await this.recognizer.transcribe(audio);
+      text = await this.recognizer.transcribe(audio, L);
     } catch {
       return retry('busy', '辨識失敗了，再試一次');
     }
     if (!text) return retry('busy', '好像沒聽到喔，靠近一點再唸一次 🎤');
     if (!still('busy')) return;
-    const result = scoreLine(line.text, text);
-    if (result.score >= 0.7) this.sfx.correct();
+    const result =
+      L.asr.unit === 'char'
+        ? scoreChars(line.tokens, text, song ?? {})
+        : scoreLine(line.text, text);
+    if (result.score >= L.asr.pass) this.sfx.correct();
     this.patchStop(
       idx,
-      result.score >= 0.7
+      result.score >= L.asr.pass
         ? { result, state: 'pass', passed: true }
         : { result, state: 'fail', tries: stop.tries + 1 },
     );

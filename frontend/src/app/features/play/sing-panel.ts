@@ -1,13 +1,18 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { PlaySession, SingStop } from '../../core/play-session';
 import { SpeechRecognizer } from '../../core/speech-recognizer';
 import { BackingTrack } from '../../core/backing-track';
 import { YoutubePlayer } from '../../core/youtube-player';
-import { langOf } from '../../core/lang';
+import { langOf, tokLang } from '../../core/lang';
+import { Reading } from '../../core/reading';
+import { isPractice } from '../../core/game/scoring';
+import { Token } from '../../core/models/song.model';
 
 /** 唱唱看面板（D）。狀態都在 PlaySession，這裡只有音量條。顯示時＝進入唱唱看：載模型、建伴奏。 */
 @Component({
   selector: 'app-sing-panel',
+  imports: [NgTemplateOutlet],
   templateUrl: './sing-panel.html',
   styleUrl: './sing-panel.css',
 })
@@ -16,6 +21,10 @@ export class SingPanel {
   protected readonly recognizer = inject(SpeechRecognizer);
   protected readonly backing = inject(BackingTrack);
   private readonly player = inject(YoutubePlayer);
+  private readonly reading = inject(Reading);
+
+  protected readonly lang = computed(() => langOf(this.session.song() ?? {}));
+  protected readonly romaji = computed(() => this.reading.mode() === 'romaji');
 
   protected readonly level = signal(0);
   protected readonly stops = computed(() => this.session.questions() as SingStop[]);
@@ -38,19 +47,24 @@ export class SingPanel {
   /** 沒過時提示的前兩個字。 */
   protected readonly missHint = computed(() =>
     (this.stop()?.result?.words ?? [])
-      .filter((w) => w.ok === 'miss')
+      .filter((w) => w.ok === 'miss' && isPractice(w, this.session.song() ?? {})) // 和「要多練的字」同一條規則
       .slice(0, 2)
-      .map((w) => langOf(this.session.song() ?? {}).norm(w.t))
+      .map((w) => (w.tok ? w.t : this.lang().norm(w.t))) // en 照舊顯示 norm 過的字
       .join('、'),
   );
 
   constructor() {
-    void this.recognizer.load().catch(() => {}); // 失敗訊息在 recognizer.note
+    void this.recognizer.load(this.lang()).catch(() => {}); // 這首歌語言的模型；失敗訊息在 recognizer.note
     this.backing.create(this.session.song()?.karaoke);
     inject(DestroyRef).onDestroy(() => {
       this.session.cancelSing();
       this.backing.destroy();
     });
+  }
+
+  /** 這個 token 要標的讀音（照讀音切換；英文 token 沒有）。 */
+  protected rt(t: Token): string | undefined {
+    return this.reading.of(t, tokLang(t, this.session.song() ?? {}));
   }
 
   protected choose(all: boolean): void {

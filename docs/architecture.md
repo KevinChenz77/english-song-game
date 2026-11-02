@@ -96,7 +96,7 @@ src/app/
       └─ sing-panel.ts              # 唱唱看：練習／挑戰選擇、音量條、逐字著色、過關／重試／跳過、總結
 ```
 
-**不用 `@defer`**：`Play` 整條路由已經 lazy 載入；`PlaySession` 靜態 import `SpeechRecognizer`，在 Play 裡 defer `sing-panel` 也拆不出東西。真正大的 Whisper（transformers.js 4.3.1＋約 41MB 模型）本來就在執行期從 CDN 動態載入，不進 bundle。
+**不用 `@defer`**：`Play` 整條路由已經 lazy 載入；`PlaySession` 靜態 import `SpeechRecognizer`，在 Play 裡 defer `sing-panel` 也拆不出東西。真正大的 Whisper（transformers.js 4.3.1＋英文約 41MB／日文約 80MB 模型）本來就在執行期從 CDN 動態載入，不進 bundle。
 
 ### 家長設定
 直接寫在 `play.html` 的 `<details>`，`(toggle)` 同步到 `session.parentOpen`，`lyrics-panel` 依此決定中文能不能點（`prompt()` 修改）。不另拆元件。
@@ -131,7 +131,7 @@ src/app/
 | `translations.ts` | （函式）`localTranslations(songId)`／`saveTranslation(songId, line, zh)` | 家長修改的翻譯（`tr_<songId>`） |
 | `pronunciation.ts` | `Pronunciation` | `say(word)`：Free Dictionary → Wikimedia Commons mp3（`aud2` 快取，`''`=查過沒有；網路錯誤不記）→ 失敗用 `speechSynthesis`（挑自然聲音、避開趣味聲音、rate 0.8）。含 iOS 首次 pointerdown 靜音解鎖、`prefetch(words)` 每 500ms 查一個 |
 | `youtube-player.ts` | `YoutubePlayer` | 見下 |
-| `speech-recognizer.ts` | `SpeechRecognizer` | `record(onLevel)`（RMS 0.015、停 1.2 秒／最長 8 秒／4 秒沒聲音、有聲 <0.4 秒視為沒唸）、`to16k`、`load()`（CDN import、進度 `note` signal、暖機；失敗可重試）、`transcribe()`（前後補 0.5 秒靜音、過濾幻覺字串）、`stop()` |
+| `speech-recognizer.ts` | `SpeechRecognizer` | `record(onLevel)`（RMS 0.015、停 1.2 秒／最長 8 秒／4 秒沒聲音、有聲 <0.4 秒視為沒唸）、`to16k`、`load(lang)`（CDN import、模型跟歌曲語言 `lang.asr`、只留一個模型、進度 `note` signal、暖機；失敗可重試）、`transcribe(audio, lang)`（前後補 0.5 秒靜音、多語模型固定 `language`、過濾 `lang.asr.junk`）、`stop()` |
 | `rewards.ts` | `Rewards` | `earn(kidId, song, key)`：每首歌每項只拿一次、加貼紙（每首歌各一份）、存檔、推送 `celebration` signal（連續獲得時文字疊加）；`dismiss()` |
 | `play-session.ts` | `PlaySession` | 遊玩狀態與流程（見下） |
 
