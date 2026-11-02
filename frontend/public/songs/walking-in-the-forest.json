@@ -1,0 +1,21 @@
+{
+  "id": "walking-in-the-forest",
+  "lrclibId": 26612536,
+  "title": "Walking In The Forest",
+  "artist": "Super Simple Songs",
+  "from": "Super Simple Songs",
+  "emoji": "🌲",
+  "videos": [
+    { "id": "xbSSm_p782c", "label": "官方 MV", "offset": 4.5 }
+  ],
+  "sticker": "🦉",
+  "quiz": {
+    "normal": ["walk", "stop", "look", "listen", "jump", "run", "owl", "rabbit", "deer", "forest"],
+    "hard": ["take", "forward", "back", "afraid", "walking", "stomping", "jumping", "skipping", "steps", "three", "listen", "smell", "woodpecker", "skunk", "rabbit", "owl", "deer", "forest", "stomp", "skip"],
+    "expert": ["take", "afraid", "forward", "forest", "listen", "smell", "skunk", "rabbit", "woodpecker", "stomping", "skipping", "jumping", "walking", "steps", "three", "back", "stop", "look", "deer", "owl"]
+  },
+  "dict": {
+    "back": "向後（steps back = 往後退）",
+    "take": "（take a walk = 去散步）"
+  }
+}
