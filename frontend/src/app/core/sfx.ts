@@ -14,7 +14,9 @@ export class Sfx {
   private ctx?: AudioContext;
 
   constructor() {
-    document.addEventListener('pointerdown', () => this.on() && this.audio(), { capture: true });
+    // 任何點擊或按鍵都順便解鎖（iOS 要在手勢裡 resume）；root 單例，不用移除
+    for (const t of ['pointerdown', 'keydown'])
+      document.addEventListener(t, () => this.on() && this.audio(), { capture: true });
   }
 
   /** 家長設定的開關。點擊時同步呼叫；打開時順便解鎖並試聽一聲「叮」。 */

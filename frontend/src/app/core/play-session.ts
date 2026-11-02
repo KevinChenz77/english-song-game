@@ -92,6 +92,7 @@ export class PlaySession {
 
   /** 開新的一局（E）。換了歌：videoIndex 歸 0；offset 讀 off_<videoId> 或預設。mode/quizLevel/singAll 沿用。 */
   open(kidId: number, song: Song, lines: LyricLine[], translations: Record<string, string>): void {
+    this.closePop(); // 上一局留下的單字小視窗不要帶過來
     if (this.song()?.id !== song.id) this.videoIndex.set(0);
     this.kidId.set(kidId);
     this.song.set(song);
@@ -233,7 +234,8 @@ export class PlaySession {
     const qs = this.quizQs().map((x, k) => (k === n ? { ...x, done: true } : x));
     this.questions.set(qs);
     this.active.set(null);
-    this.sfx.correct();
+    const last = !qs.some((x) => !x.done);
+    if (!last) this.sfx.correct(); // 最後一題會接慶祝音效，不要疊在一起
     this.pron.say(q.w); // 答對唸一次單字，和舊版一樣
     // 在點擊當下就播放，iOS 才不會擋
     const left = qs.find((x) => !x.done);

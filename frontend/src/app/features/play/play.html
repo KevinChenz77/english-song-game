@@ -90,11 +90,10 @@
       </button>
     </div>
     <div class="ctrl">
-      <!-- 預設關；aria-label 固定，開關狀態由 aria-pressed 表達 -->
+      <!-- 預設關；開關狀態由 aria-pressed 表達 -->
       <button
         type="button"
         [class.ghost]="!sfx.on()"
-        aria-label="🔔 音效"
         [attr.aria-pressed]="sfx.on()"
         (click)="sfx.toggle()"
       >

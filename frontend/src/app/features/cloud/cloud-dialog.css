@@ -14,7 +14,9 @@ input {
   font-size: var(--fs-md);
 }
 .msg:empty {
-  display: none;
+  /* 不能 display:none：這是 role="status" 的即時區域，要一直在畫面上，螢幕閱讀器才會念 */
+  margin: 0;
+  padding: 0;
 }
 /* 圖示用 ::before，不改訊息文字本身 */
 .msg.bad {

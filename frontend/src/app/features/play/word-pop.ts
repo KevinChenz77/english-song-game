@@ -1,4 +1,4 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, inject, input, DestroyRef } from '@angular/core';
 import { PlaySession } from '../../core/play-session';
 import { Pronunciation } from '../../core/pronunciation';
 import { lookup } from '../../core/game/text';
@@ -75,6 +75,10 @@ export class WordPop {
   readonly dict = input.required<Record<string, string>>();
   protected readonly session = inject(PlaySession);
   protected readonly pron = inject(Pronunciation);
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.session.closePop()); // 離開遊玩畫面時關掉，避免停住的計時
+  }
   protected readonly lookup = lookup;
 
   /** 手指／滑鼠在上面，或鍵盤焦點（:focus-visible；點按鈕得到的焦點不算，免得點過 🔊 就永遠不關）。 */

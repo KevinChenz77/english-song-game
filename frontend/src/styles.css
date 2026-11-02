@@ -243,3 +243,30 @@ dialog input {
 [hidden] {
   display: none !important;
 }
+
+/* 換頁：舊畫面淡出、新畫面淡入並微微上移（≤0.2 秒）。
+   ::view-transition-* 掛在 <html> 上，元件樣式會被加 scope 而對不到，所以用 輸出成全域規則 */
+::view-transition-old(root) {
+  animation: 120ms ease-out both vt-out;
+}
+::view-transition-new(root) {
+  animation: 200ms ease-out both vt-in;
+}
+@keyframes vt-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

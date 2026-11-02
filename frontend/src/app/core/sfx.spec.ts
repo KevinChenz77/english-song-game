@@ -39,12 +39,17 @@ describe('Sfx', () => {
     s.lines.set(lines);
     s.mode.set('quiz');
     const q: Question = { i: 0, k: 0, w: 'fox', opts: ['fox', 'x'], endT: lines[0].end, done: false, tries: 0 };
-    s.questions.set([q]);
+    const q2: Question = { ...q, i: 1, k: 2, w: 'go', endT: lines[1].end };
+    s.questions.set([q, q2]);
     s.active.set(0);
     s.answer('x');
     expect(sfx.wrong).toHaveBeenCalledTimes(1);
     expect(sfx.correct).not.toHaveBeenCalled();
     s.answer('fox');
+    expect(sfx.correct).toHaveBeenCalledTimes(1);
+    // 最後一題答對不叮（接著是慶祝音效，不要疊在一起）
+    s.active.set(1);
+    s.answer('go');
     expect(sfx.correct).toHaveBeenCalledTimes(1);
   });
 });
