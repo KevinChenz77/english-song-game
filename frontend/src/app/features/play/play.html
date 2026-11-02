@@ -1,17 +1,94 @@
 <div class="bar">
   <button type="button" class="ghost" [routerLink]="['/kids', kidId()]">← 回去</button>
+  <div class="tabs">
+    @for (t of tabs; track t[0]) {
+      <button
+        type="button"
+        [class.on]="session.mode() === t[0]"
+        [attr.aria-pressed]="session.mode() === t[0]"
+        (click)="session.setMode(t[0])"
+      >
+        {{ t[1] }}
+      </button>
+    }
+  </div>
+  <div class="stars" role="img" [attr.aria-label]="'這首歌的星星：' + stars()">{{ stars() }}</div>
 </div>
-@if (song.hasValue()) {
-  <h1>{{ song.value().emoji }} {{ song.value().title }}</h1>
-} @else if (song.error()) {
+@if (song.error()) {
   <p>這首歌的設定讀不到 😢 請確認網路後再試一次。</p>
   <button type="button" (click)="song.reload()">重試</button>
 }
-@if (content.hasValue()) {
-  <p>歌詞 {{ content.value().lines.length }} 句（畫面第二波實作）</p>
-} @else if (content.error(); as e) {
-  <p>{{ e.message }}</p>
-  <button type="button" (click)="content.reload()">重試</button>
-} @else {
-  <p>歌詞載入中…</p>
-}
+<div class="stage">
+  <div>
+    <div class="vid">
+      <div #yt class="yt"></div>
+      <!-- 透明遮罩：小朋友點不到 YouTube 的連結和推薦影片 -->
+      <div class="shield" aria-hidden="true" (click)="toggle()"></div>
+    </div>
+    <div class="ctrl">
+      <button type="button" class="play" (click)="toggle()">
+        {{ player.playing() ? '⏸ 暫停' : '▶ 播放' }}
+      </button>
+    </div>
+    <div class="status" role="status">
+      @if (player.error()) {
+        這支影片沒辦法在這裡播放，請在上面換另一個影片版本。
+      }
+    </div>
+    <details class="parent" (toggle)="onParentToggle($event)">
+      <summary>⚙️ 家長設定</summary>
+      <div class="ctrl">
+        <label>
+          影片版本：
+          <select (change)="setVideo($event)">
+            @for (v of session.song()?.videos ?? []; track v.id; let i = $index) {
+              <option [value]="i" [selected]="i === session.videoIndex()">{{ v.label }}</option>
+            }
+          </select>
+        </label>
+      </div>
+      <div class="ctrl">
+        歌詞時間：<button
+          type="button"
+          class="ghost"
+          (click)="session.setOffset(session.offset() - 0.1)"
+        >
+          ⏪ 提早 0.1 秒</button
+        ><span>{{ offsetText() }}</span
+        ><button type="button" class="ghost" (click)="session.setOffset(session.offset() + 0.1)">
+          延後 0.1 秒 ⏩
+        </button>
+      </div>
+      <div class="ctrl">
+        <span class="spacer" aria-hidden="true">歌詞時間：</span
+        ><button type="button" class="ghost" (click)="session.setOffset(session.offset() - 1)">
+          ⏪ 提早 1 秒</button
+        ><button type="button" class="ghost" (click)="session.setOffset(session.offset() + 1)">
+          延後 1 秒 ⏩
+        </button>
+      </div>
+      <div class="ctrl">設定打開時，點歌詞下方的中文可以修改翻譯。</div>
+    </details>
+  </div>
+  <div>
+    @if (content.hasValue()) {
+      @switch (session.mode()) {
+        @case ('quiz') {
+          <app-quiz-panel />
+        }
+        @case ('sing') {
+          <app-sing-panel />
+        }
+      }
+      <app-lyrics-panel [dict]="dict()" />
+    } @else if (content.error(); as e) {
+      <div class="lyrics-msg">
+        <p>{{ e.message }}</p>
+        <button type="button" (click)="content.reload()">重試</button>
+      </div>
+    } @else {
+      <div class="lyrics-msg">歌詞載入中…</div>
+    }
+  </div>
+</div>
+<app-word-pop [dict]="dict()" />
