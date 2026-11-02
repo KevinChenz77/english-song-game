@@ -2,6 +2,8 @@
 
 加歌**不用改任何程式碼**：只加資料檔＋重建 content.db。改到 `.ts`／`.html` 就是做錯了（或發現了該修的 bug，回報前端架構師）。
 
+> 🌏 非英文歌（日文等）、沒有 LRCLIB 要手動對時間的歌：設計中，見 [multilingual.md](multilingual.md) §7，實作完成後併入本文件。
+
 > ⚠️ 這是公開 repo。**歌詞（任何一句原文）和整句翻譯絕對不能 commit**，包括 json、測試、文件、commit 訊息、PR 說明、截圖。歌詞只存在本機產生的 `content.db`（`*.db` 已在 `.gitignore`），上傳到後端。
 
 ## 步驟
