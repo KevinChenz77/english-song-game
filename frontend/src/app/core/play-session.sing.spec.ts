@@ -4,8 +4,8 @@ import { YoutubePlayer } from './youtube-player';
 import { Rewards } from './rewards';
 import { SpeechRecognizer, isHallucination } from './speech-recognizer';
 import { BackingTrack } from './backing-track';
-import { Song } from './models/song.model';
-import { tokenize } from './lang';
+import { Song, Token } from './models/song.model';
+import { LANGS, tokenize } from './lang';
 import { SingPanel } from '../features/play/sing-panel';
 
 // 自編句子（公開 repo 不放真歌詞）
@@ -24,12 +24,14 @@ describe('PlaySession 唱唱看', () => {
   let earn: ReturnType<typeof vi.fn>;
   let recResult: Promise<Float32Array | null>;
   let heard: string;
+  let transcribe: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     calls = [];
     earn = vi.fn();
     recResult = Promise.resolve(new Float32Array(10));
     heard = '';
+    transcribe = vi.fn(async () => heard);
     TestBed.configureTestingModule({
       providers: [
         {
@@ -45,7 +47,7 @@ describe('PlaySession 唱唱看', () => {
           provide: SpeechRecognizer,
           useValue: {
             record: () => (calls.push('record'), recResult),
-            transcribe: async () => heard,
+            transcribe,
             stop: () => {},
             load: () => Promise.resolve(),
             note: () => '',
@@ -106,6 +108,9 @@ describe('PlaySession 唱唱看', () => {
     expect(isHallucination('Thank you.')).toBe(true);
     expect(isHallucination('[BLANK_AUDIO]')).toBe(true);
     expect(isHallucination('tiny boats')).toBe(false);
+    expect(isHallucination('さて、この動画を見てくれてありがとう!', LANGS['ja'])).toBe(true);
+    expect(isHallucination('ご視聴ありがとうございました', LANGS['ja'])).toBe(true);
+    expect(isHallucination('ねこにありがとう', LANGS['ja'])).toBe(false);
   });
 
   it('連點換你唸：只錄一次', async () => {
@@ -195,7 +200,7 @@ describe('PlaySession 唱唱看', () => {
   it('挑戰：80% 句子過關才 earn singAll；要多練的字去掉 STOP 字', () => {
     s.singAll.set(true);
     finishWith(4);
-    expect(s.singSummary()).toEqual({ passed: 4, total: 5, score: 80, missed: ['purple'] });
+    expect(s.singSummary()).toEqual({ passed: 4, total: 5, score: 80, missed: [{ s: 'purple' }] });
     expect(earn).toHaveBeenCalledWith(1, song, 'singAll');
   });
 
@@ -237,6 +242,153 @@ describe('PlaySession 唱唱看', () => {
     s.singAll.set(true);
     await fixture.whenStable();
     expect(text()).toContain('⏭ 先跳過');
+  });
+});
+
+describe('PlaySession 唱唱看（日文）', () => {
+  // 自編句子（不是歌詞）
+  const jaLine = { t: 1, end: 3, text: 'ねこが学校へ行く' };
+  const toks: Token[] = [
+    { s: 'ねこ', ro: 'neko' },
+    { s: 'が', ro: 'ga' },
+    { s: '学校', r: 'がっこう', ro: 'gakkou' },
+    { s: 'へ', ro: 'e' },
+    { s: '行く', r: 'いく', ro: 'iku' },
+  ];
+  const jaSong = { id: 'ja-demo', lang: 'ja' } as Song;
+  let s: PlaySession;
+  let heard: string;
+  let transcribe: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    localStorage.clear();
+    heard = '';
+    transcribe = vi.fn(async () => heard);
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: YoutubePlayer, useValue: { play: () => {}, pause: () => {}, seek: () => {} } },
+        { provide: Rewards, useValue: { earn: () => {} } },
+        {
+          provide: SpeechRecognizer,
+          useValue: {
+            record: () => Promise.resolve(new Float32Array(10)),
+            transcribe,
+            stop: () => {},
+            load: vi.fn(() => Promise.resolve()),
+            note: () => '',
+          },
+        },
+        {
+          provide: BackingTrack,
+          useValue: {
+            play: () => {},
+            stop: () => {},
+            create: () => {},
+            destroy: () => {},
+            on: () => false,
+          },
+        },
+      ],
+    });
+    s = TestBed.inject(PlaySession);
+    s.kidId.set(1);
+    s.song.set(jaSong);
+    s.lines.set(tokenize([jaLine], jaSong, { [jaLine.text]: toks }));
+    s.mode.set('sing');
+    s.questions.set([{ i: 0, endT: 3, done: false, tries: 0 }]);
+    s.active.set(0);
+  });
+  const q = () => (s.questions() as SingStop[])[0];
+
+  it('用 ja 模型辨識、scoreChars 評分、門檻 0.6（英文 0.7 會沒過）', async () => {
+    heard = 'ねこが学校';
+    await s.startSing();
+    expect(transcribe).toHaveBeenCalledWith(expect.any(Float32Array), LANGS['ja']);
+    expect(q().result!.score).toBe(0.6);
+    expect(q()).toMatchObject({ state: 'pass', passed: true });
+    expect(q().result!.words.map((w) => w.ok)).toEqual(['exact', 'exact', 'exact', 'miss', 'miss']);
+  });
+
+  it('要多練的字：token（帶讀音），去掉助詞', () => {
+    s.questions.update((qs) =>
+      qs.map((x) => ({
+        ...x,
+        done: true,
+        result: {
+          score: 0,
+          words: toks.map((t) => ({
+            t: t.s,
+            tok: t,
+            ok: t.s === 'ねこ' ? ('exact' as const) : ('miss' as const),
+          })),
+        },
+      })),
+    );
+    s.finish();
+    expect(s.singSummary()!.missed).toEqual([toks[2], toks[4]]);
+  });
+
+  it('面板：lang="ja"、平假名讀音 ruby、字之間不插空白；結果也標讀音', async () => {
+    const fixture = TestBed.createComponent(SingPanel);
+    await fixture.whenStable();
+    expect(TestBed.inject(SpeechRecognizer).load).toHaveBeenCalledWith(LANGS['ja']);
+    const sent = () => (fixture.nativeElement as HTMLElement).querySelector('.sent')!;
+    expect(sent().getAttribute('lang')).toBe('ja');
+    expect([...sent().querySelectorAll('rt')].map((r) => r.textContent)).toEqual([
+      'がっこう',
+      'いく',
+    ]);
+    expect([...sent().querySelectorAll('.tk')].map((e) => e.textContent).join('|')).toBe(
+      'ねこ|が|学校がっこう|へ|行くいく',
+    );
+    expect(sent().textContent!.trim()).not.toMatch(/ねこ\s+が/);
+    heard = 'ねこが学校';
+    await s.startSing();
+    await fixture.whenStable();
+    expect(sent().querySelector('.sw-miss rt')?.textContent).toBe('いく');
+    expect(sent().querySelectorAll('.sw-ok').length).toBe(3);
+    expect(sent().textContent!.trim()).not.toMatch(/ねこ\s+が/);
+  });
+});
+
+describe('SpeechRecognizer 換語言', () => {
+  it('同一個模型只載一次；換語言先丟掉舊的，ja 固定 japanese、濾日文幻覺', async () => {
+    const dispose = vi.fn(async () => {});
+    const runs: unknown[][] = [];
+    const notes: string[] = [];
+    let heardJa = 'ご視聴ありがとうございました';
+    const r = TestBed.inject(SpeechRecognizer);
+    const pipeline = vi.fn(
+      async (_task: string, _model: string, o: { progress_callback: (p: object) => void }) => {
+        o.progress_callback({ status: 'progress', file: 'a', loaded: 5, total: 10 });
+        notes.push(r.note());
+        return Object.assign(async (...a: unknown[]) => (runs.push(a), { text: heardJa }), {
+          dispose,
+        });
+      },
+    );
+    vi.spyOn(
+      r as unknown as { pipelineFn: () => Promise<unknown> },
+      'pipelineFn',
+    ).mockResolvedValue(pipeline);
+    const en = r.load();
+    expect(r.load(LANGS['en'])).toBe(en);
+    await en;
+    expect(runs[0][1]).toBeUndefined(); // en 暖機：和以前一樣不給語言
+    await r.load(LANGS['ja']);
+    expect(dispose).toHaveBeenCalledTimes(1); // en 的被丟掉
+    expect(pipeline.mock.calls.map((c) => c[1])).toEqual([
+      LANGS['en'].asr.model,
+      LANGS['ja'].asr.model,
+    ]);
+    expect(notes[0]).toContain('約 41MB');
+    expect(notes[1]).toContain(`約 ${LANGS['ja'].asr.mb}MB`);
+    expect(await r.transcribe(new Float32Array(10), LANGS['ja'])).toBe('');
+    expect(runs.at(-1)![1]).toEqual({ language: 'japanese', task: 'transcribe' });
+    heardJa = 'ねこがいる';
+    expect(await r.transcribe(new Float32Array(10), LANGS['ja'])).toBe('ねこがいる');
+    expect(pipeline).toHaveBeenCalledTimes(2);
+    expect(r.note()).toBe('');
   });
 });
 

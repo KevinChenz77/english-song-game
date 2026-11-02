@@ -1,3 +1,7 @@
+<!-- 一個 token：有讀音就用 ruby（照讀音切換）。不要在 > 和 < 之間換行，ja 字之間會多出空白 -->
+<ng-template #tok let-t
+  >@if (rt(t); as r) {<ruby>{{ t.s }}<rt>{{ r }}</rt></ruby>} @else {{{ t.s }}}</ng-template
+>
 <section class="box">
   <p class="note" aria-live="polite">{{ recognizer.note() }}</p>
   @if (session.singSummary(); as s) {
@@ -8,9 +12,9 @@
     }
     @if (s.missed.length) {
       <p>要多練的字：</p>
-      <div class="chips">
-        @for (w of s.missed; track w) {
-          <button type="button" class="chip" (click)="session.tapWord({ s: w })">{{ w }}</button>
+      <div class="chips" [attr.lang]="lang().code">
+        @for (w of s.missed; track w.s) {
+          <button type="button" class="chip" [attr.lang]="w.l ?? null" (click)="session.tapWord(w)"><ng-container *ngTemplateOutlet="tok; context: { $implicit: w }" /></button>
         }
       </div>
     }
@@ -22,17 +26,32 @@
       <div class="prog">第 {{ progress() }} / {{ stops().length }} 句</div>
     }
     @if (stop(); as s) {
-      <div class="sent">
+      <div
+        class="sent"
+        [attr.lang]="lang().code"
+        [class.ruby]="lang().reading"
+        [class.unspaced]="!lang().spaced"
+      >
         @if (s.result) {
           @for (w of s.result.words; track $index) {
+            @let t = w.tok ?? { s: w.t };
             @if (w.ok === 'miss') {
-              <button type="button" class="sw-miss" (click)="session.tapWord({ s: w.t })">
-                {{ w.t }}
-              </button>
+              <button
+                type="button"
+                class="sw-miss"
+                [attr.lang]="t.l ?? null"
+                (click)="session.tapWord(t)"
+              ><ng-container *ngTemplateOutlet="tok; context: { $implicit: t }" /></button>
             } @else {
-              <span class="sw-ok">{{ w.t }}</span>
+              <span class="sw-ok" [attr.lang]="t.l ?? null"><ng-container *ngTemplateOutlet="tok; context: { $implicit: t }" /></span>
             }
-            {{ ' ' }}
+            @if (lang().spaced) {
+              {{ ' ' }}
+            }
+          }
+        } @else if (lang().reading) {
+          @for (t of line()?.tokens ?? []; track $index) {
+            <span class="tk" [attr.lang]="t.l ?? null"><ng-container *ngTemplateOutlet="tok; context: { $implicit: t }" /></span>
           }
         } @else {
           {{ line()?.text }}

@@ -266,3 +266,15 @@ button.switch {
     animation: none;
   }
 }
+
+/* 有 ruby 的語言（ja）：固定較高的行距；不用空白分隔時字之間一點間距 */
+.sent.ruby {
+  line-height: 2.4;
+}
+rt {
+  font-size: 0.5em;
+  line-height: 1;
+}
+.sent.unspaced > * {
+  margin-inline: 0.06em;
+}

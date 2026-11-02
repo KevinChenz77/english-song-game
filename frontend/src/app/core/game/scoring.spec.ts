@@ -1,4 +1,4 @@
-import { charDist, scoreLine } from './scoring';
+import { charDist, scoreChars, scoreLine } from './scoring';
 
 // 測試資料一律用假句子（不放真實歌詞）
 describe('scoreLine（legacy #test 的情況）', () => {
@@ -34,5 +34,41 @@ describe('charDist', () => {
     expect(charDist('kitten', 'sitting')).toBe(3);
     expect(charDist('', 'abc')).toBe(3);
     expect(charDist('lamp', 'lamp')).toBe(0);
+  });
+});
+
+// 自編的日文句子（不是歌詞）
+describe('scoreChars（日文逐字）', () => {
+  const ja = { lang: 'ja' };
+  const toks = [
+    { s: 'ねこ' },
+    { s: 'が' },
+    { s: '学校', r: 'がっこう' },
+    { s: 'へ' },
+    { s: 'happy', l: 'en' },
+  ];
+  const ok = (heard: string) => scoreChars(toks, heard, ja).words.map((w) => w.ok);
+
+  it('原文或讀音出現＝exact；片假名、標點、空白、大小寫不影響', () => {
+    expect(ok('ネコが、がっこう へ Happy!')).toEqual(['exact', 'exact', 'exact', 'exact', 'exact']);
+    expect(scoreChars(toks, 'ねこが学校へhappy', ja).score).toBe(1);
+  });
+
+  it('假名被寫成漢字（ねこ→猫）＝near；沒唸到＝miss；英文 token 只比原文', () => {
+    expect(ok('猫が学校へ')).toEqual(['near', 'exact', 'exact', 'exact', 'miss']);
+    expect(scoreChars(toks, '猫が学校へ', ja).score).toBe(3.5 / 5);
+  });
+
+  it('讀音對到一半＝near；空字串＝0；結果帶 token（畫面標讀音）', () => {
+    expect(ok('ねがっこ')[0]).toBe('near');
+    expect(scoreChars(toks, '', ja).score).toBe(0);
+    expect(scoreChars(toks, '', ja).words[2].tok).toBe(toks[2]);
+  });
+
+  it('只有標點的 token 不算分', () => {
+    expect(scoreChars([{ s: 'ねこ' }, { s: '！' }], 'ねこ', ja)).toMatchObject({
+      score: 1,
+      words: [{ t: 'ねこ' }],
+    });
   });
 });
