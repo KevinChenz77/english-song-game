@@ -2,12 +2,14 @@ import { Component, inject, input, DestroyRef } from '@angular/core';
 import { PlaySession } from '../../core/play-session';
 import { Pronunciation } from '../../core/pronunciation';
 import { lookup } from '../../core/game/text';
+import { Dicts, tokLang } from '../../core/lang';
+import { Token } from '../../core/models/song.model';
 
 /** 點單字的小視窗（PlaySession.tapWord 打開，6 秒自動關；碰著／鍵盤焦點在上面時不關；🔊 重播）。 */
 @Component({
   selector: 'app-word-pop',
   template: `
-    @if (session.popWord(); as w) {
+    @if (session.popWord(); as t) {
       <div
         #pop
         class="pop"
@@ -18,10 +20,10 @@ import { lookup } from '../../core/game/text';
         (focusout)="hold(over, pop.contains(next($event)))"
       >
         <div class="txt">
-          <b>{{ w }}</b>
-          <span>{{ lookup(w, dict()) || '（還沒有中文解釋）' }}</span>
+          <b>{{ t.s }}</b>
+          <span>{{ zh(t) || '（還沒有中文解釋）' }}</span>
         </div>
-        <button type="button" class="say" aria-label="再聽一次" (click)="pron.say(w)">🔊</button>
+        <button type="button" class="say" aria-label="再聽一次" (click)="pron.say(t.s)">🔊</button>
         <button type="button" class="ghost" aria-label="關閉" (click)="session.closePop()">✕</button>
       </div>
     }
@@ -72,14 +74,19 @@ import { lookup } from '../../core/game/text';
   `,
 })
 export class WordPop {
-  readonly dict = input.required<Record<string, string>>();
+  readonly dicts = input.required<Dicts>();
   protected readonly session = inject(PlaySession);
   protected readonly pron = inject(Pronunciation);
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.session.closePop()); // 離開遊玩畫面時關掉，避免停住的計時
   }
-  protected readonly lookup = lookup;
+
+  /** t.s 已 norm 過（PlaySession.tapWord）。 */
+  protected zh(t: Token) {
+    const L = tokLang(t, this.session.song() ?? {});
+    return lookup(t.s, this.dicts()[L.code] ?? {}, L.forms);
+  }
 
   /** 手指／滑鼠在上面，或鍵盤焦點（:focus-visible；點按鈕得到的焦點不算，免得點過 🔊 就永遠不關）。 */
   protected over = false;

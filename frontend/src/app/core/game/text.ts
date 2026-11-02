@@ -13,9 +13,12 @@ export const norm = (w: string) =>
     .replace(/[^a-z']/g, '')
     .replace(/^'+|'+$/g, '');
 
-/** 查中文；複數查不到就退回原形。dict = 共用字典合併歌曲專屬字典。 */
-export const lookup = (w: string, dict: Record<string, string>) =>
-  dict[w] || (w.endsWith('s') && dict[w.slice(0, -1)]) || null;
+/** 英文查字典依序試的字形：原形、複數去 s。 */
+export const enForms = (w: string) => (w.endsWith('s') ? [w, w.slice(0, -1)] : [w]);
+
+/** 查中文：依 forms 依序試（預設英文：複數查不到就退回原形）。dict = 該語言的共用字典合併歌曲專屬字典。 */
+export const lookup = (w: string, dict: Record<string, string>, forms = enForms) =>
+  forms(w).map((f) => dict[f]).find(Boolean) || null;
 
 export const shuffle = <T>(a: T[]): T[] => {
   for (let i = a.length - 1; i > 0; i--) {

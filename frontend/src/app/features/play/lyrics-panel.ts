@@ -9,7 +9,10 @@ import {
 } from '@angular/core';
 import { PlaySession } from '../../core/play-session';
 import { YoutubePlayer } from '../../core/youtube-player';
-import { STOP, lookup, norm } from '../../core/game/text';
+import { lookup } from '../../core/game/text';
+import { karaokeTimes } from '../../core/game/karaoke';
+import { Dicts, tokLang } from '../../core/lang';
+import { Token } from '../../core/models/song.model';
 
 /** 歌詞：目前句高亮＋自動捲動、卡拉 OK 逐字亮、填空、▶ seek、單字 chip、中文（家長模式可改）。 */
 @Component({
@@ -18,34 +21,37 @@ import { STOP, lookup, norm } from '../../core/game/text';
   styleUrl: './lyrics-panel.css',
 })
 export class LyricsPanel {
-  /** 共用字典疊上 song.dict。 */
-  readonly dict = input.required<Record<string, string>>();
+  /** 每個語言的共用字典（歌曲語言那一份已疊上 song.dict）。 */
+  readonly dicts = input.required<Dicts>();
   protected readonly session = inject(PlaySession);
   private readonly player = inject(YoutubePlayer);
   private readonly box = viewChild.required<ElementRef<HTMLElement>>('box');
 
-  /** 每句的字、填空位置、單字 chip（只在歌詞／題目／字典變的時候重算）。 */
+  /** 每句的字、填空位置、單字 chip、卡拉 OK 時間（只在歌詞／題目／字典變的時候重算）。 */
   protected readonly rows = computed(() => {
-    const dict = this.dict();
+    const dicts = this.dicts();
+    const song = this.session.song() ?? {};
     const qs = this.session.questions();
     return this.session.lines().map((l, i) => {
       const q = qs.find((q) => q.i === i);
       const blank = q && 'k' in q ? q : null; // 填填看的題目才有空格
       const seen = new Set<string>();
-      const chips: { w: string; zh: string }[] = [];
-      const words = l.text.split(/\s+/).map((tok, k) => {
-        const n = norm(tok),
-          m = lookup(n, dict);
-        if (m && !STOP.has(n) && !seen.has(n) && n !== blank?.w) {
+      const chips: { w: string; zh: string; t: Token }[] = [];
+      const words = l.tokens.map((t, k) => {
+        const L = tokLang(t, song),
+          n = L.norm(t.s),
+          m = lookup(n, dicts[L.code] ?? {}, L.forms);
+        if (m && !L.stop.has(n) && !seen.has(n) && n !== blank?.w) {
           // 填空題的答案不放進單字列
           seen.add(n);
-          chips.push({ w: n, zh: m.split('（')[0] });
+          chips.push({ w: n, zh: m.split('（')[0], t });
         }
-        return { tok, known: !!m, blank: blank?.k === k };
+        return { t, known: !!m, blank: blank?.k === k };
       });
       return {
         l,
         words,
+        times: karaokeTimes(l, song),
         chips,
         blankOk: !!blank?.done,
         passed: !!(q && 'passed' in q && q.passed),
@@ -53,15 +59,12 @@ export class LyricsPanel {
     });
   });
 
-  /** 卡拉 OK：目前句依時間比例已亮起的字數。 */
+  /** 卡拉 OK：目前句已經過了幾個 token 的開始時間（karaokeTimes）。 */
   protected readonly sung = computed(() => {
     const i = this.session.currentLine();
     if (i < 0) return 0;
-    const l = this.session.lines()[i],
-      n = l.text.split(/\s+/).length,
-      t = this.session.time();
-    const dur = Math.min(l.end - l.t, n * 0.5 + 0.8);
-    return Math.ceil(Math.min(1, (t - l.t) / dur) * n);
+    const t = this.session.time();
+    return this.rows()[i]?.times.filter((x) => x < t).length ?? 0;
   });
 
   constructor() {

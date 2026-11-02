@@ -8,10 +8,10 @@
     <div class="sent">
       @for (tok of words(); track $index) {
         @if ($index === q.k) {
-          <span class="blank" aria-hidden="true">{{ '＿'.repeat(tok.length) }}</span
+          <span class="blank" aria-hidden="true">{{ '＿'.repeat(tok.s.length) }}</span
           ><span class="sr-only">空格</span>
         } @else {
-          {{ tok }}
+          {{ tok.s }}
         }
         {{ ' ' }}
       }

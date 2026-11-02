@@ -8,7 +8,7 @@ export const REWARDS: Record<RewardKey, { star?: true; sticker?: string; msg: st
   singAll: { star: true, sticker: '👑', msg: '🏆 整首歌唱對 80% 以上！' },
   quizNormal: { star: true, msg: '🙂 填填看「普通」全對！' },
   quizHard: { star: true, msg: '🔥 填填看「挑戰」全對！' }, // 貼紙 = song.sticker
-  expert: { msg: '💎 填填看「最難」全部一次打對！\n曲子小卡變成金色了 ✨' },
+  expert: { msg: '💎 填填看「最難」全部一次答對！\n曲子小卡變成金色了 ✨' },
 };
 
 export const STAR_KEYS = (Object.keys(REWARDS) as RewardKey[]).filter((k) => REWARDS[k].star);

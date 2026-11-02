@@ -4,14 +4,16 @@ import { YoutubePlayer } from './youtube-player';
 import { Rewards } from './rewards';
 import { Question } from './game/quiz';
 import { parseLrc } from './game/lrc';
+import { tokenize } from './lang';
 import { Song } from './models/song.model';
 
 // 假句子（不放真實歌詞）
-const lines = parseLrc('[00:01] red fox runs\n[00:03] the big blue boat\n[00:05] we can go now');
+const lines = tokenize(parseLrc('[00:01] red fox runs\n[00:03] the big blue boat\n[00:05] we can go now'), {});
 const q = (i: number, w: string): Question => ({
   i,
   k: 0,
   w,
+  tok: { s: w },
   opts: [w, 'x', 'y'],
   endT: lines[i].end,
   done: false,

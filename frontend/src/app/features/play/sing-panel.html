@@ -10,7 +10,7 @@
       <p>要多練的字：</p>
       <div class="chips">
         @for (w of s.missed; track w) {
-          <button type="button" class="chip" (click)="session.tapWord(w)">{{ w }}</button>
+          <button type="button" class="chip" (click)="session.tapWord({ s: w })">{{ w }}</button>
         }
       </div>
     }
@@ -26,7 +26,7 @@
         @if (s.result) {
           @for (w of s.result.words; track $index) {
             @if (w.ok === 'miss') {
-              <button type="button" class="sw-miss" (click)="session.tapWord(norm(w.t))">
+              <button type="button" class="sw-miss" (click)="session.tapWord({ s: w.t })">
                 {{ w.t }}
               </button>
             } @else {

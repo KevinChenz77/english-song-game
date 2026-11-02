@@ -3,7 +3,7 @@ import { PlaySession, SingStop } from '../../core/play-session';
 import { SpeechRecognizer } from '../../core/speech-recognizer';
 import { BackingTrack } from '../../core/backing-track';
 import { YoutubePlayer } from '../../core/youtube-player';
-import { norm } from '../../core/game/text';
+import { langOf } from '../../core/lang';
 
 /** 唱唱看面板（D）。狀態都在 PlaySession，這裡只有音量條。顯示時＝進入唱唱看：載模型、建伴奏。 */
 @Component({
@@ -16,7 +16,6 @@ export class SingPanel {
   protected readonly recognizer = inject(SpeechRecognizer);
   protected readonly backing = inject(BackingTrack);
   private readonly player = inject(YoutubePlayer);
-  protected readonly norm = norm;
 
   protected readonly level = signal(0);
   protected readonly stops = computed(() => this.session.questions() as SingStop[]);
@@ -41,7 +40,7 @@ export class SingPanel {
     (this.stop()?.result?.words ?? [])
       .filter((w) => w.ok === 'miss')
       .slice(0, 2)
-      .map((w) => norm(w.t))
+      .map((w) => langOf(this.session.song() ?? {}).norm(w.t))
       .join('、'),
   );
 

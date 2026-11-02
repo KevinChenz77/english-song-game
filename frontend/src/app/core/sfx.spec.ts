@@ -4,6 +4,7 @@ import { PlaySession } from './play-session';
 import { YoutubePlayer } from './youtube-player';
 import { Rewards } from './rewards';
 import { parseLrc } from './game/lrc';
+import { tokenize } from './lang';
 import { Question } from './game/quiz';
 
 describe('Sfx', () => {
@@ -35,11 +36,11 @@ describe('Sfx', () => {
     });
     const s = TestBed.inject(PlaySession);
     // 假句子（不放真實歌詞）
-    const lines = parseLrc('[00:01] red fox runs\n[00:03] we can go now');
+    const lines = tokenize(parseLrc('[00:01] red fox runs\n[00:03] we can go now'), {});
     s.lines.set(lines);
     s.mode.set('quiz');
-    const q: Question = { i: 0, k: 0, w: 'fox', opts: ['fox', 'x'], endT: lines[0].end, done: false, tries: 0 };
-    const q2: Question = { ...q, i: 1, k: 2, w: 'go', endT: lines[1].end };
+    const q: Question = { i: 0, k: 0, w: 'fox', tok: { s: 'fox' }, opts: ['fox', 'x'], endT: lines[0].end, done: false, tries: 0 };
+    const q2: Question = { ...q, i: 1, k: 2, w: 'go', tok: { s: 'go' }, endT: lines[1].end };
     s.questions.set([q, q2]);
     s.active.set(0);
     s.answer('x');

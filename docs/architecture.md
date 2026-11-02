@@ -126,7 +126,7 @@ src/app/
 | `app-config.ts` | `APP_CONFIG`（InjectionToken）、`checkConfig()` | 執行期設定 `{ apiBaseUrl }`（§6） |
 | `storage.ts` | （函式）`load(k, d)`／`save(k, v)` | localStorage JSON 讀寫，全部 try/catch。純函式 |
 | `kids-store.ts` | `KidsStore` | `kids` signal、`byId()`、`add()`（`nameOk` 檢查）／`remove()`／`update(id, fn)`；每次變更產生新陣列並寫回 `kids`；啟動時跑 `rewardsV2` 一次性歸零。匯入合併由 cloud-dialog 用 `add()`／`update()` 組 |
-| `song-catalog.ts` | `SongCatalog` | `ids()`：`HttpClient` 讀 `songs/index.json`（Promise 快取，失敗不快取），**guard 用它判斷歌是否存在**；`songs`：`resource()` 抓清單上每首 json，給選歌畫面；`dict`：`httpResource` 讀 `songs/dict.json`。**沒有** `song(id)` 方法——單首歌由 `Play` 元件自己的 field `httpResource(() => \`songs/${songId()}.json\`)` 建立 |
+| `song-catalog.ts` | `SongCatalog` | `ids()`：`HttpClient` 讀 `songs/index.json`（Promise 快取，失敗不快取），**guard 用它判斷歌是否存在**；`songs`：`resource()` 抓清單上每首 json，給選歌畫面；`dict(code)`：`HttpClient` 讀 `songs/dict.<code>.json`（每個語言一個 Promise 快取，失敗不快取、回 `{}`；`Play` 依歌曲用到的語言各抓一份）。**沒有** `song(id)` 方法——單首歌由 `Play` 元件自己的 field `httpResource(() => \`songs/${songId()}.json\`)` 建立 |
 | `api.ts` | `Api` | 後端：`save()`／`load()`（`POST ${apiBaseUrl}/api/save|load`，HTTP 狀態 → 中文訊息，見 §5.5）、`content(songId)`（`GET /api/songs/{id}/content` → `parseLrc` ＋ 翻譯疊上本機 `tr_<songId>`；404 →「這首歌的歌詞還沒準備好」、其他 →「歌詞抓不到…」）。失敗一律丟 `Error(中文訊息)`。`Play` 用 field `resource({ params: songId, loader: api.content })`，重試＝`reload()` |
 | `translations.ts` | （函式）`localTranslations(songId)`／`saveTranslation(songId, line, zh)` | 家長修改的翻譯（`tr_<songId>`） |
 | `pronunciation.ts` | `Pronunciation` | `say(word)`：Free Dictionary → Wikimedia Commons mp3（`aud2` 快取，`''`=查過沒有；網路錯誤不記）→ 失敗用 `speechSynthesis`（挑自然聲音、避開趣味聲音、rate 0.8）。含 iOS 首次 pointerdown 靜音解鎖、`prefetch(words)` 每 500ms 查一個 |
@@ -212,7 +212,7 @@ export interface SaveData { version: 1; savedAt: string; players: SavedPlayer[] 
 - ⚠️ `public/songs/letitgo.json` 的 `quiz` 是**暫用清單**（legacy 規則對目前 LRCLIB 歌詞實際產生的字），教育顧問的正式清單出來後直接替換該 JSON。
 
 ### 5.2 單字中文字典
-- `public/songs/dict.json`：**所有歌共用**的 `{ word: 中文 }`（舊版 `DICT` 全部搬進來）。
+- `public/songs/dict.<lang>.json`（英文＝`dict.en.json`）：同一個語言**所有歌共用**的 `{ word: 中文 }`（舊版 `DICT` 全部搬進 `dict.en.json`）。多語言見 [multilingual.md](multilingual.md)。
 - `song.dict`：這首歌專屬的解釋（例如 `"let": "讓（let it go = 放手）"`），覆蓋共用字典。
 - STOP 字是遊戲規則，留在 `core/game/text.ts`。
 
@@ -220,7 +220,7 @@ export interface SaveData { version: 1; savedAt: string; players: SavedPlayer[] 
 ```
 public/songs/index.json   # ["letitgo", ...]  選歌畫面的順序
 public/songs/letitgo.json # Song
-public/songs/dict.json    # 共用字典
+public/songs/dict.en.json # 共用字典（每個語言一個 dict.<lang>.json）
 ```
 理由：公開的靜態內容，不需權限；跟著前端版本發佈、走快取。加歌＝加 json＋改 index.json＋重新部署前端，**再**由內容工程師把歌詞與翻譯放進後端 content.db（`POST /api/admin/content`）。
 **歌詞與翻譯絕對不放進 `public/` 或任何 commit 的檔案。**
@@ -228,7 +228,7 @@ public/songs/dict.json    # 共用字典
 
 ### 5.3.1 新增歌曲
 步驟清單、`<id>.json` 欄位說明、不能 commit 的東西：見 **[adding-a-song.md](adding-a-song.md)**。
-- 加歌只動資料：`public/songs/<id>.json`、`index.json`、`dict.json`＋重建上傳 content.db（**整檔替換，必須含所有歌**）。程式碼不得出現特定歌曲 id 或歌曲數量。
+- 加歌只動資料：`public/songs/<id>.json`、`index.json`、`dict.<lang>.json`＋重建上傳 content.db（**整檔替換，必須含所有歌**）。程式碼不得出現特定歌曲 id 或歌曲數量。
 - `core/songs-data.spec.ts` 檢查 index.json 裡每首歌（檔案、id、欄位、影片、題數、字典、貼紙不重複），`ng test` 不過不能合併。
 - 歌曲 id 上線後不能改名（進度 `kid.songs[id]`、`tr_<id>` 都用它當 key）。
 
@@ -337,7 +337,7 @@ fetch('config.json', { cache: 'no-store' })
 |---|---|
 | `<style>`（8–131） | `src/styles.css`（共用變數、按鈕、card、gold、dialog）＋各元件 `.css` |
 | `SONG`（250） | `public/songs/letitgo.json` |
-| `DICT`（261） | `public/songs/dict.json`（`let`、`go` 的特殊解釋放 `letitgo.json` 的 `dict`） |
+| `DICT`（261） | `public/songs/dict.en.json`（`let`、`go` 的特殊解釋放 `letitgo.json` 的 `dict`） |
 | `STOP`（285） | `core/game/text.ts` |
 | `QUIZ_POOL`、`EASY_WORDS`、`HARD_WORDS`（287–295） | 取消（改 `song.quiz` 手動清單，§5.1） |
 | `QUIZ_LEVELS` 的標籤文字（289） | `quiz-panel.ts`（第二波） |

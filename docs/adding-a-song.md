@@ -19,7 +19,7 @@
    - 全部小寫、只有字母和 `'`（要跟 `norm()` 後一樣，例如 `can't`，不是 `Can't`、`can’t`）。
    - 每個字都要真的出現在歌詞裡；同一個字列兩次＝出兩題（找兩句不同的）。找不到的字會被略過並在 console 印「填填看：找不到…」——上傳 content.db 後每個難度玩一次，看 console 有沒有警告。
 6. **字典**：每個題目單字都要查得到中文。
-   - 一般解釋加到 `frontend/public/songs/dict.json`，**依字母順序插入**（測試會檢查；多人同時加歌時比較不會衝突）。複數字（`fears`）查不到時會退回原形（`fear`），原形有就不用加。
+   - 一般解釋加到 `frontend/public/songs/dict.en.json`（每個語言一個 `dict.<lang>.json`），**依字母順序插入**（測試會檢查；多人同時加歌時比較不會衝突）。複數字（`fears`）查不到時會退回原形（`fear`），原形有就不用加。
    - 只有這首歌才成立的解釋（例：`"let": "讓（let it go = 放手）"`）放這首歌的 `dict`，會覆蓋共用字典。
 7. **建 `frontend/public/songs/<id>.json`**（欄位見下表），並把 id 加進 `frontend/public/songs/index.json`（陣列順序＝選歌畫面順序）。
 8. **建 content.db 並上傳**（內容工程師）：
@@ -30,7 +30,7 @@
    ```bash
    cd frontend && npx ng test --watch=false && npx ng build
    ```
-   `src/app/core/songs-data.spec.ts` 會檢查 index.json 裡每首歌：檔案存在、id＝檔名、必填欄位、影片、題數、每個字有中文、貼紙不重複、dict.json 有排序。
+   `src/app/core/songs-data.spec.ts` 會檢查 index.json 裡每首歌：檔案存在、id＝檔名、必填欄位、影片、題數、每個字有中文、貼紙不重複、每個 `dict.<lang>.json` 有排序；`lang`、題數範圍依歌曲語言（`core/lang.ts`）、`lrclibId`／`localLrc` 剛好一個。
 10. **實際玩一次**：聽聽看（歌詞對得上）、三個難度的填填看（console 沒有「找不到」警告）、唱唱看（伴奏對得上）。
 
 前端重新部署＋後端 content.db 上傳都完成，新歌才完整可玩（只有前端 → 選得到但顯示「歌詞還沒準備好」）。
@@ -51,7 +51,7 @@
 | `karaoke` | | `{ id, offset }`：唱唱看伴奏（純音樂）影片 |
 | `sticker` | ✅ | 填填看「挑戰」全對的專屬貼紙，跟其他歌、🎤、👑 都不同 |
 | `quiz` | ✅ | `{ normal: 10 個, hard: 18～20 個, expert: 18～20 個 }`，小寫單字 |
-| `dict` | | `{ word: 中文 }`：這首歌專用的解釋，覆蓋 `dict.json` |
+| `dict` | | `{ word: 中文 }`：這首歌專用的解釋，覆蓋 `dict.<lang>.json` |
 
 **不要**放進 json 的：`lyrics`、`lines`、`translations` 或任何歌詞片段。
 

@@ -4,13 +4,14 @@ import {
   afterRenderEffect,
   computed,
   inject,
+  input,
   linkedSignal,
   viewChild,
 } from '@angular/core';
 import { PlaySession } from '../../core/play-session';
-import { SongCatalog } from '../../core/song-catalog';
 import { Question, pickQuestions } from '../../core/game/quiz';
-import { lookup, norm } from '../../core/game/text';
+import { lookup } from '../../core/game/text';
+import { Dicts, tokLang, wordLang } from '../../core/lang';
 import { LyricLine, QuizLevel, Song } from '../../core/models/song.model';
 
 /** 難度卡（icon、名稱、一行短說明）與結算的獎勵文字。題數＝實際出得出來的題目數（找不到句子的字會被略過）。 */
@@ -21,7 +22,7 @@ const LEVELS = (
   QuizLevel,
   { icon: string; name: string; label: string; line: string; reward: string }
 > => {
-  const n = (l: QuizLevel) => pickQuestions(lines, song?.quiz?.[l] ?? []).length,
+  const n = (l: QuizLevel) => pickQuestions(lines, song?.quiz?.[l] ?? [], song ?? {}).length,
     st = song?.sticker ?? '';
   return {
     normal: {
@@ -55,16 +56,13 @@ const LEVELS = (
   styleUrl: './quiz-panel.css',
 })
 export class QuizPanel {
+  /** 每個語言的共用字典（歌曲語言那一份已疊上 song.dict）。 */
+  readonly dicts = input.required<Dicts>();
   protected readonly s = inject(PlaySession);
-  private readonly catalog = inject(SongCatalog);
 
   protected readonly keys: QuizLevel[] = ['normal', 'hard', 'expert'];
   protected readonly levels = computed(() => LEVELS(this.s.song(), this.s.lines()));
   protected readonly level = computed(() => this.levels()[this.s.quizLevel()]);
-  private readonly dict = computed(() => ({
-    ...this.catalog.dict.value(),
-    ...this.s.song()?.dict,
-  }));
   protected readonly qs = computed(() => this.s.questions() as Question[]);
   protected readonly doneN = computed(() => this.qs().filter((q) => q.done).length);
   protected readonly num = computed(() => Math.min(this.doneN() + 1, this.qs().length));
@@ -74,7 +72,7 @@ export class QuizPanel {
   });
   protected readonly words = computed(() => {
     const q = this.q();
-    return q ? this.s.lines()[q.i].text.split(/\s+/) : [];
+    return q ? this.s.lines()[q.i].tokens : [];
   });
   /** 這題按錯的選項；換題就清空。 */
   protected readonly wrong = linkedSignal<number | null, ReadonlySet<string>>({
@@ -104,8 +102,10 @@ export class QuizPanel {
     afterRenderEffect(() => this.input()?.nativeElement.focus());
   }
 
+  /** 題目字／選項的中文；字的語言照 wordLang（選項只有字串）。 */
   protected zh(w: string): string {
-    return (lookup(w, this.dict()) || '').split('（')[0];
+    const L = wordLang(w, this.s.song() ?? {});
+    return (lookup(w, this.dicts()[L.code] ?? {}, L.forms) || '').split('（')[0];
   }
 
   protected blanks(w: string): string {
@@ -126,7 +126,7 @@ export class QuizPanel {
 
   /** 最難：Enter 與「確定」都直接呼叫，全程同步（iOS）。答錯時 tries 變了，輸入框會重建。 */
   protected submit(q: Question, inp: HTMLInputElement): void {
-    const w = norm(inp.value);
+    const w = tokLang(q.tok, this.s.song() ?? {}).norm(inp.value);
     if (!w) return inp.focus();
     this.s.answer(w);
     if (w === q.w) this.ok(q);

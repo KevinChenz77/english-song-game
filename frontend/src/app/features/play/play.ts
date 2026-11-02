@@ -21,6 +21,7 @@ import { SongCatalog } from '../../core/song-catalog';
 import { Sfx } from '../../core/sfx';
 import { YoutubePlayer } from '../../core/youtube-player';
 import { starStr } from '../../core/game/reward-rules';
+import { Dicts, langOf } from '../../core/lang';
 import { PlayMode, Song } from '../../core/models/song.model';
 import { LyricsPanel } from './lyrics-panel';
 import { QuizPanel } from './quiz-panel';
@@ -61,11 +62,30 @@ export class Play {
     loader: ({ params }) => this.api.content(params),
   });
 
-  /** 共用字典疊上這首歌的 dict。 */
-  protected readonly dict = computed(() => ({
-    ...this.catalog.dict.value(),
-    ...this.session.song()?.dict,
-  }));
+  /** 這首歌用到的語言（歌曲語言＋tokens 裡的其他語言）各一份共用字典。params 用字串，同一組語言不重抓。 */
+  private readonly sharedDicts = resource({
+    params: () => {
+      const s = this.session.song();
+      if (!s) return undefined;
+      const codes = new Set([langOf(s).code]);
+      for (const l of this.session.lines()) for (const t of l.tokens) if (t.l) codes.add(t.l);
+      return [...codes].join(',');
+    },
+    loader: async ({ params }) =>
+      Object.fromEntries(
+        await Promise.all(params.split(',').map(async (c) => [c, await this.catalog.dict(c)] as const)),
+      ),
+    defaultValue: {},
+  });
+
+  /** 每個語言的共用字典；這首歌的 dict 只疊在歌曲語言那一份上。 */
+  protected readonly dicts = computed<Dicts>(() => {
+    const s = this.session.song();
+    const own = s ? langOf(s).code : '';
+    return Object.fromEntries(
+      Object.entries(this.sharedDicts.value()).map(([c, d]) => [c, c === own ? { ...d, ...s?.dict } : d]),
+    );
+  });
 
   protected readonly stars = computed(() =>
     starStr(this.kids.byId(this.kidId())?.songs[this.songId()] ?? {}),
