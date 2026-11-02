@@ -2,7 +2,7 @@
 @if (kid(); as k) {
   <h1>嗨 {{ k.avatar }} {{ k.name }}！選一首歌</h1>
   @if (catalog.songs.hasValue()) {
-    <div class="grid">
+    <div class="grid songs">
       @for (s of catalog.songs.value(); track s.id) {
         <a [routerLink]="['play', s.id]"><app-song-card [song]="s" [progress]="k.songs[s.id] ?? {}" /></a>
       }
@@ -13,12 +13,20 @@
   } @else {
     <p>歌曲載入中…</p>
   }
-  <div class="stickers">
-    我的貼紙：
-    @for (s of k.stickers; track $index) {
-      <span>{{ s }}</span>
-    } @empty {
-      <span>還沒有，加油！</span>
-    }
-  </div>
+  <section class="stickers" aria-labelledby="stickersTitle">
+    <h2 id="stickersTitle">🏆 我的貼紙</h2>
+    <ul>
+      @for (s of stickers(); track s.emoji) {
+        <li>
+          {{ s.emoji }}
+          @if (s.n > 1) {
+            <span class="n">×{{ s.n }}</span>
+          }
+        </li>
+      } @empty {
+        <li class="empty" aria-hidden="true">？</li>
+        <li class="hint">還沒有貼紙，去唱歌拿貼紙！</li>
+      }
+    </ul>
+  </section>
 }

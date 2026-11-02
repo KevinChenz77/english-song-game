@@ -9,9 +9,31 @@ import { starStr } from '../core/game/reward-rules';
   host: { class: 'card', '[class.gold]': 'progress().expert' },
   template: `
     <div class="big">{{ song().emoji }}</div>
-    <b>{{ song().title }}</b>
-    <div>{{ song().from }}</div>
-    <div>{{ stars() }}</div>
+    <b class="title">{{ song().title }}</b>
+    <div class="from">{{ song().from }}</div>
+    <div class="stars">{{ stars() }}</div>
+  `,
+  styles: `
+    :host {
+      min-height: 220px;
+      gap: var(--sp-2);
+      text-align: center;
+    }
+    .big {
+      font-size: 72px;
+    }
+    .title {
+      font-size: var(--fs-lg);
+      line-height: 1.25;
+    }
+    .from {
+      font-size: var(--fs-sm);
+      color: var(--ink-2);
+    }
+    .stars {
+      font-size: var(--fs-lg);
+      letter-spacing: 2px;
+    }
   `,
 })
 export class SongCard {
