@@ -1,6 +1,8 @@
 <main class="shell">
   <router-outlet />
-  <div class="save"><button type="button" class="ghost" (click)="cloud.open('save')">💾 存檔</button></div>
+  <div class="save">
+    <button type="button" class="ghost" (click)="cloud.open('save')"><span aria-hidden="true">💾</span>存檔</button>
+  </div>
 </main>
 <app-cloud-dialog />
 <app-celebration />
