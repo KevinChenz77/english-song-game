@@ -1,0 +1,22 @@
+{
+  "id": "walking-in-the-jungle",
+  "lrclibId": 38770544,
+  "title": "Walking in the Jungle",
+  "artist": "Super Simple Songs",
+  "from": "Super Simple Songs",
+  "emoji": "🌴",
+  "videos": [
+    { "id": "GoSq-yZcJ-4", "label": "官方 MV", "offset": -3.5 }
+  ],
+  "karaoke": { "id": "-QpoNJEek7E", "offset": 0 },
+  "sticker": "🐯",
+  "quiz": {
+    "normal": ["walk", "jungle", "stop", "listen", "jump", "run", "frog", "monkey", "tiger", "afraid"],
+    "hard": ["take", "forward", "back", "afraid", "walking", "stomping", "jumping", "skipping", "steps", "three", "listen", "frog", "monkey", "toucan", "tiger", "jungle", "stomp", "skip", "step", "two"],
+    "expert": ["take", "afraid", "forward", "jungle", "listen", "toucan", "monkey", "tiger", "frog", "stomping", "skipping", "jumping", "walking", "steps", "three", "back", "stop", "skip", "stomp", "jump"]
+  },
+  "dict": {
+    "back": "向後（steps back = 往後退）",
+    "take": "（take a walk = 去散步）"
+  }
+}
