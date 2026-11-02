@@ -29,7 +29,7 @@ import { Reading } from '../../core/reading';
           <b [attr.lang]="L.code">{{ t.s }}</b>
           <span>{{ zh(t) || '（還沒有中文解釋）' }}</span>
         </div>
-        <button type="button" class="say" aria-label="再聽一次" (click)="pron.say(t.s)">🔊</button>
+        <button type="button" class="say" aria-label="再聽一次" (click)="pron.say(t, L)">🔊</button>
         <button type="button" class="ghost" aria-label="關閉" (click)="session.closePop()">✕</button>
       </div>
     }
