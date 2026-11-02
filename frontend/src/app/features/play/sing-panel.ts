@@ -32,6 +32,10 @@ export class SingPanel {
     const qs = this.stops();
     return Math.min(qs.filter((q) => q.done).length + 1, qs.length);
   });
+  /** 停在某句或唸過任何一句才顯示「第 x / N 句」，還在選模式時不顯示。 */
+  protected readonly started = computed(
+    () => this.stop() !== null || this.stops().some((q) => q.done || q.tries > 0),
+  );
   /** 沒過時提示的前兩個字。 */
   protected readonly missHint = computed(() =>
     (this.stop()?.result?.words ?? [])
