@@ -53,3 +53,8 @@ a.card {
 .avs button.sel {
   border-color: var(--accent);
 }
+.bad {
+  min-height: 1.5em;
+  margin: 6px 0 0;
+  color: var(--bad);
+}

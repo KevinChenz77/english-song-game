@@ -12,7 +12,10 @@ import { load, save } from '../../core/storage';
 
 type Kind = 'save' | 'load';
 
-/** 讓 💾（外框）和 📥（選小朋友）打開同一個 <app-cloud-dialog>。 */
+/**
+ * 讓 💾（外框）和 📥（選小朋友）打開同一個 <app-cloud-dialog>。
+ * ponytail: CloudDialog 建構時把自己的 open 塞進來，只支援畫面上一個實例；要多個再改成 signal 請求＋effect。
+ */
 @Service()
 export class Cloud {
   open: (kind: Kind) => void = () => {};
@@ -101,6 +104,15 @@ export class CloudDialog {
     this.dlg().nativeElement.close();
   }
 
+  /** dialog 關掉（取消、關閉、Esc）時清掉密碼。 */
+  protected closed() {
+    this.clearPassword();
+  }
+
+  private clearPassword() {
+    this.model.update((m) => ({ ...m, password: '' }));
+  }
+
   /** 按 Enter 也會走這裡。 */
   protected async submit(e: Event) {
     e.preventDefault();
@@ -172,6 +184,7 @@ export class CloudDialog {
 
   private finish(s: string) {
     this.say(s);
+    this.clearPassword();
     this.done.set(true);
     this.closeEl().nativeElement.focus();
   }

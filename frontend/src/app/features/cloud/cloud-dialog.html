@@ -1,4 +1,4 @@
-<dialog #dlg aria-labelledby="cloudT">
+<dialog #dlg aria-labelledby="cloudT" (close)="closed()">
   <form novalidate (submit)="submit($event)">
     <h2 id="cloudT">{{ kind() === 'save' ? '💾 把進度存到雲端' : '📥 從雲端匯入進度' }}</h2>
     <div [hidden]="done()">

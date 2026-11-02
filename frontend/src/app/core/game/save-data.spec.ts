@@ -33,6 +33,23 @@ describe('cleanSave（legacy #test＋壞資料）', () => {
     (d) => expect(cleanSave(d)).toBeNull(),
   );
 
+  it('只留認得的獎勵鍵且值為 true；頭像、貼紙太長丟掉；貼紙最多 200 個', () => {
+    const r = cleanSave({
+      players: [
+        {
+          name: 'a',
+          avatar: 'x'.repeat(9),
+          songs: { s: { listen: true, expert: true, quizHard: 'yes', bogus: true, singAll: false } },
+          stickers: ['🎤', 'y'.repeat(9), ...Array(300).fill('👑')],
+        },
+      ],
+    })!;
+    expect(r[0].avatar).toBe('🐱');
+    expect(r[0].songs).toEqual({ s: { listen: true, expert: true } });
+    expect(r[0].stickers).toHaveLength(200);
+    expect(r[0].stickers[0]).toBe('🎤');
+  });
+
   it('songs 是陣列、stickers 混雜非字串', () => {
     const r = cleanSave({ players: [{ name: 'a', avatar: '', songs: [], stickers: ['🎤', 3, null] }] });
     expect(r).toEqual([{ name: 'a', avatar: '🐱', songs: {}, stickers: ['🎤'] }]);

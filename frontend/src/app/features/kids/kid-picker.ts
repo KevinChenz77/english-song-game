@@ -20,7 +20,9 @@ export class KidPicker {
   protected readonly avatars = AVATARS;
   protected readonly adding = signal(false);
   protected readonly avatar = signal(AVATARS[0]);
+  protected readonly nameMsg = signal('');
   private readonly nameEl = viewChild<ElementRef<HTMLInputElement>>('name');
+  private readonly addBtn = viewChild.required<ElementRef<HTMLButtonElement>>('addBtn');
 
   /** 卡片上的星星：這位小朋友所有歌的星星數加總。 */
   protected stars(k: Kid) {
@@ -33,13 +35,21 @@ export class KidPicker {
 
   protected open() {
     this.adding.set(true);
+    this.nameMsg.set('');
     afterNextRender(() => this.nameEl()?.nativeElement.focus(), { injector: this.injector });
   }
 
   protected add(input: HTMLInputElement) {
     // KidsStore.add() 用 nameOk()：去空白後 1～10 字
-    if (!this.store.add(input.value, this.avatar())) return input.focus();
-    input.value = '';
+    if (!this.store.add(input.value, this.avatar())) {
+      this.nameMsg.set('名字要 1～10 個字');
+      return input.focus();
+    }
+    this.cancel();
+  }
+
+  protected cancel() {
     this.adding.set(false);
+    this.addBtn().nativeElement.focus();
   }
 }

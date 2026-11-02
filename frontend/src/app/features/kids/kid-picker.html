@@ -15,22 +15,23 @@
       <button type="button" class="del" [attr.aria-label]="'刪除 ' + k.name" (click)="remove(k)">✕</button>
     </div>
   }
-  <button type="button" class="card add" (click)="open()">
+  <button #addBtn type="button" class="card add" (click)="open()">
     <div class="big">➕</div>
     <div>新增小朋友</div>
   </button>
 </div>
 @if (adding()) {
   <div class="form">
-    <label>名字：<input #name maxlength="10" placeholder="例如：小明" (keydown.enter)="add(name)" /></label>
-    <div class="avs" role="radiogroup" aria-label="頭像">
+    <label>名字：<input #name placeholder="例如：小明" aria-describedby="nameMsg" (keydown.enter)="add(name)" /></label>
+    <p id="nameMsg" class="bad" role="status">{{ nameMsg() }}</p>
+    <div class="avs" role="group" aria-label="頭像">
       @for (a of avatars; track a) {
-        <button type="button" role="radio" [attr.aria-checked]="a === avatar()" [class.sel]="a === avatar()" (click)="avatar.set(a)">
+        <button type="button" [attr.aria-pressed]="a === avatar()" [class.sel]="a === avatar()" (click)="avatar.set(a)">
           {{ a }}
         </button>
       }
     </div>
     <button type="button" (click)="add(name)">好了！</button>
-    <button type="button" class="ghost" (click)="adding.set(false)">取消</button>
+    <button type="button" class="ghost" (click)="cancel()">取消</button>
   </div>
 }

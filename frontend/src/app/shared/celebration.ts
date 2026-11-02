@@ -1,33 +1,20 @@
-import { Component, inject } from '@angular/core';
+import { Component, ElementRef, afterRenderEffect, inject, viewChild } from '@angular/core';
 import { Rewards } from '../core/rewards';
 
-/** 慶祝畫面：讀 Rewards.celebration（連續獲得時文字已疊加）。 */
+/** 慶祝畫面：讀 Rewards.celebration（連續獲得時文字已疊加）；用 <dialog> 當真正的 modal。 */
 @Component({
   selector: 'app-celebration',
   template: `
-    @if (rewards.celebration(); as c) {
-      <div class="cele" role="alertdialog" aria-live="assertive">
-        <div class="box">
-          <div class="big">{{ c.emoji }}</div>
-          <p>{{ c.text }}</p>
-          <button type="button" (click)="rewards.dismiss()">好耶！</button>
-        </div>
-      </div>
-    }
+    <dialog #dlg aria-labelledby="celeT" (close)="rewards.dismiss()">
+      @if (rewards.celebration(); as c) {
+        <div class="big" aria-hidden="true">{{ c.emoji }}</div>
+        <p id="celeT">{{ c.text }}</p>
+        <button #ok type="button" (click)="rewards.dismiss()">好耶！</button>
+      }
+    </dialog>
   `,
   styles: `
-    .cele {
-      position: fixed;
-      inset: 0;
-      background: #16324fcc;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      z-index: 10;
-    }
-    .box {
-      background: #fff;
+    dialog {
       border-radius: 24px;
       padding: 28px;
       text-align: center;
@@ -44,4 +31,17 @@ import { Rewards } from '../core/rewards';
 })
 export class Celebration {
   protected readonly rewards = inject(Rewards);
+  private readonly dlg = viewChild.required<ElementRef<HTMLDialogElement>>('dlg');
+  private readonly ok = viewChild<ElementRef<HTMLButtonElement>>('ok');
+
+  constructor() {
+    // 只同步 DOM：signal 有內容就開 modal，null 就關
+    afterRenderEffect(() => {
+      const d = this.dlg().nativeElement;
+      if (this.rewards.celebration()) {
+        if (!d.open) d.showModal();
+        this.ok()?.nativeElement.focus();
+      } else if (d.open) d.close();
+    });
+  }
 }
