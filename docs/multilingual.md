@@ -100,7 +100,7 @@ export interface Lang {
   dictAudio: boolean;           // Free Dictionary 真人錄音
   tts: { lang: string; good: RegExp; rate: number };
   units(t: Token): number;      // 卡拉 OK 權重：en 音節數、ja 音拍數（§5.1）
-  asr: { model: string; language?: string; mb: number; unit: 'word' | 'char'; pass: number; junk: RegExp };
+  asr?: { model: string; language?: string; mb: number; unit: 'word' | 'char'; pass: number; junk: RegExp };
 }
 
 export const LANGS: Record<string, Lang> = { en: {...}, ja: {...} };
