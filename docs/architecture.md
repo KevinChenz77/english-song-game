@@ -108,8 +108,9 @@ src/app/
 ### iOS 手勢規則（所有元件都適用）
 `player.play()`、`new AudioContext()`、單字發音的靜音解鎖，**必須在點擊事件的同步呼叫鏈裡**執行。
 - 不可以「點擊 → 改 signal → `effect` 再播放」。
-- 最難模式打字題：`submit()` 是**同步**函式（`(keydown.enter)` 與「確定」按鈕都直接呼叫），比對答案後同步呼叫 `session.answer()`，`answer()` 內同步 `player.play()`。中間不能有 `await`、`setTimeout`、Promise。
+- 最難模式打字題：`submit()` 是**同步**函式（`(keydown.enter)` 與「確定」按鈕都直接呼叫），比對答案後同步呼叫 `session.answer()`，`answer()` 內同步唸單字。中間不能有 `await`、`setTimeout`、Promise。
 - 選擇題、「下一句」、「再聽一次」同理。
+- **例外：填填看答對後等單字唸完才 `player.play()`**（最多等 3 秒），單字才不會和歌疊在一起。這個 `play()` 不在點擊同步鏈上；若 iOS 擋下，小朋友可按 ▶ 播放。
 - 唱唱看「🎤 換你唸」：click handler **同步**呼叫 `SpeechRecognizer.record()`，之前不能有任何 `await`（模型要先在切到唱唱看時 `load()`，不要點擊時 `await load()` 再錄）。`record()` 本身也要在第一個 `await` 前同步做完 `getUserMedia()` 與 `new AudioContext()`。介面與註解已寫在 `core/speech-recognizer.ts`。
 
 ### 第一列對齊（💾 存檔）
@@ -413,7 +414,7 @@ fetch('config.json', { cache: 'no-store' })
 
 ### 風險
 1. **CDN 動態 import**：`import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.1/+esm')` 在 esbuild 建置下要寫成變數＋`/* @vite-ignore */`，避免被打包器處理；第 0 步驗證。備案：`npm i @huggingface/transformers@4.3.1` 並複製 wasm 檔（較重）。
-2. **iOS 手勢限制**（§3）：code review 必看「點擊 → 同步 play()」。
+2. **iOS 手勢限制**（§3）：code review 必看「點擊 → 同步 play()」；例外是填填看答對後等單字唸完才 play。
 3. **就地修改 signal 內容**（§4）：畫面不更新且不報錯，code review 必看。
 4. **ScriptProcessorNode 已棄用**：照搬；瀏覽器移除時再改 `AudioWorklet`（只動 `speech-recognizer.ts`）。
 5. **localStorage 換網域會「看起來」掉進度**（§7）。

@@ -6,6 +6,7 @@ import { YTNamespace, loadYouTubeApi } from './youtube-api';
  * - iframe_api script 由共用的 loadYouTubeApi() 插入（只插一次）；onReady 後每 100ms 呼叫 onTick(currentTime)。
  * - Play 在自己的歌曲設定＋歌詞都載入後，以 afterRenderEffect 呼叫 create()（每首歌一次），DestroyRef.onDestroy 呼叫 destroy()。
  * - iOS：play() 必須在點擊事件的同步呼叫鏈裡被呼叫（不能點擊 → 改 signal → effect → play）。
+ *   例外：填填看答對後等單字唸完才 play，不在點擊同步鏈上；若 iOS 擋下，小朋友可按 ▶ 播放。
  */
 @Service()
 export class YoutubePlayer {

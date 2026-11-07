@@ -145,14 +145,14 @@ export class QuizPanel {
     this.s.setMode('quiz');
   }
 
-  /** 選擇題：點擊時同步呼叫 answer()（答對時 answer 內同步 play()）。 */
+  /** 選擇題：點擊時同步呼叫 answer()（答對時 answer 內同步唸單字，唸完才 play()）。 */
   protected choose(q: Question, w: string): void {
     this.s.answer(w);
     if (w === q.w) this.ok(q);
     else this.wrong.update((s) => new Set(s).add(w));
   }
 
-  /** 最難：Enter 與「確定」都直接呼叫，全程同步（iOS）。答錯時 tries 變了，輸入框會重建。 */
+  /** 最難：Enter 與「確定」都直接呼叫，同步呼叫 answer()（唸單字要在點擊當下，iOS）。答錯時 tries 變了，輸入框會重建。 */
   protected submit(q: Question, inp: HTMLInputElement): void {
     const w = tokLang(q.tok, this.s.song() ?? {}).norm(inp.value);
     if (!w) return inp.focus();
