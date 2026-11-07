@@ -42,13 +42,16 @@ export class Pronunciation {
 
   /**
    * 唸一個 token；L＝這個 token 的語言（tokLang）。dictAudio 語言用 s 查字典（要 norm 過）。
-   * 點擊時同步呼叫：快取裡有、或直接 TTS 時當下就唸。
+   * 點擊時同步呼叫：快取裡有、或直接 TTS 時當下就唸。唸完才 resolve（被新的發音或 stop() 打斷時可能不會 resolve，要等的人自己設上限）。
    */
-  say(t: Token, L: Lang): void {
+  say(t: Token, L: Lang): Promise<void> {
     if (!L.dictAudio) return this.speak(t.r ?? t.s, L);
     const w = t.s;
     if (Object.hasOwn(this.aud, w)) return this.playUrl(w, this.aud[w], L);
-    void this.url(w).then((u) => this.playUrl(w, u, L));
+    return this.url(w).then(
+      (u) => this.playUrl(w, u, L),
+      () => this.speak(w, L),
+    );
   }
 
   /** 先慢慢查好英文字典發音（每 500ms 一個），避免被限流。只傳 dictAudio 語言的字。 */
@@ -120,24 +123,30 @@ export class Pronunciation {
     return url;
   }
 
-  private playUrl(w: string, url: string | null, L: Lang): void {
+  private playUrl(w: string, url: string | null, L: Lang): Promise<void> {
     if (!url) return this.speak(w, L);
-    this.audio.src = url;
-    this.audio.play().catch(() => this.speak(w, L));
+    return new Promise((done) => {
+      this.audio.src = url;
+      this.audio.onended = () => done();
+      this.audio.play().catch(() => this.speak(w, L).then(done));
+    });
   }
 
-  private speak(text: string, L: Lang): void {
-    try {
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = L.tts.lang;
-      u.rate = L.tts.rate;
-      const v = this.voice(L);
-      if (v) u.voice = v;
-      speechSynthesis.speak(u);
-    } catch {
-      /* 沒有 speechSynthesis */
-    }
+  private speak(text: string, L: Lang): Promise<void> {
+    return new Promise((done) => {
+      try {
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = L.tts.lang;
+        u.rate = L.tts.rate;
+        const v = this.voice(L);
+        if (v) u.voice = v;
+        u.onend = u.onerror = () => done();
+        speechSynthesis.speak(u);
+      } catch {
+        done(); // 沒有 speechSynthesis
+      }
+    });
   }
 
   /** 該語言的自然聲音：先找地區相同（en-US／ja-JP）且在 good 名單的，避開趣味聲音。找不到不快取（聲音清單可能還沒載入）。 */

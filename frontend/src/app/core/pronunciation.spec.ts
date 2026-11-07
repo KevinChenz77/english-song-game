@@ -79,6 +79,35 @@ describe('Pronunciation.say 依語言', () => {
     expect(spoken[1].text).toBe('いぬ');
   });
 
+  it('TTS：utterance 結束才 resolve', async () => {
+    const p = TestBed.inject(Pronunciation);
+    let done = false;
+    void p.say({ s: 'いぬ' }, LANGS['ja']).then(() => (done = true));
+    await Promise.resolve();
+    expect(done).toBe(false);
+    (spoken[0] as unknown as { onend: () => void }).onend();
+    await vi.waitFor(() => expect(done).toBe(true));
+  });
+
+  it('錄音：播到 ended 才 resolve', async () => {
+    localStorage.setItem('aud2', JSON.stringify({ fox: 'https://example.test/fox.mp3' }));
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue();
+    const p = TestBed.inject(Pronunciation);
+    let done = false;
+    void p.say({ s: 'fox' }, LANGS['en']).then(() => (done = true));
+    await Promise.resolve();
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(done).toBe(false);
+    (p as unknown as { audio: HTMLAudioElement }).audio.dispatchEvent(new Event('ended'));
+    await vi.waitFor(() => expect(done).toBe(true));
+    play.mockRestore();
+  });
+
+  it('沒有 speechSynthesis：直接 resolve', async () => {
+    vi.stubGlobal('speechSynthesis', undefined);
+    await TestBed.inject(Pronunciation).say({ s: 'いぬ' }, LANGS['ja']);
+  });
+
   it('英文 token（日文歌裡 l: en）：走英文字典，查不到用 en-US 的自然聲音', async () => {
     const fetch = vi.fn().mockResolvedValue({ status: 404, ok: false });
     vi.stubGlobal('fetch', fetch);

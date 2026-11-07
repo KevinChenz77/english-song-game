@@ -28,6 +28,7 @@ async function setup(level: 'normal' | 'expert' = 'normal') {
     providers: [
       { provide: YoutubePlayer, useValue: player },
       { provide: Rewards, useValue: { earn: vi.fn() } },
+      { provide: Pronunciation, useValue: { say: vi.fn(), prefetch: vi.fn() } },
     ],
   });
   const s = TestBed.inject(PlaySession);
@@ -83,7 +84,7 @@ describe('QuizPanel', () => {
     expect(btn('挑戰').textContent).not.toContain('18 題');
   });
 
-  it('選擇題：中文提示；答錯停用＋答案提示；答對同步 play() 並顯示答對', async () => {
+  it('選擇題：中文提示；答錯停用＋答案提示；答對顯示答對，唸完 play()', async () => {
     const { s, player, f, el, btn } = await setup();
     s.active.set(0);
     await f.whenStable();
@@ -96,13 +97,13 @@ describe('QuizPanel', () => {
     expect(btn('fox').classList).toContain('hint');
     expect(el.textContent).toContain('再想想 🤔');
     btn('fox').click();
-    expect(player.play).toHaveBeenCalledTimes(1); // 同一個 click 裡
     await f.whenStable();
+    await vi.waitFor(() => expect(player.play).toHaveBeenCalledTimes(1));
     expect(el.querySelector('.yay')!.textContent).toContain('✅ 答對了！fox 狐狸');
     expect(el.querySelector('.modes')).toBeNull(); // 答到一半不能換難度
   });
 
-  it('最難：Enter 同步送出；錯 2 次給答案', async () => {
+  it('最難：Enter 送出；錯 2 次給答案', async () => {
     const { s, player, f, el } = await setup('expert');
     s.active.set(1);
     await f.whenStable();
@@ -123,7 +124,7 @@ describe('QuizPanel', () => {
     expect(el.querySelector('.hint')!.textContent).toContain('答案是「boat」');
     inp().value = ' Boat ';
     inp().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
-    expect(player.play).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(player.play).toHaveBeenCalledTimes(1));
   });
 
   it('結束：顯示成績與難度按鈕', async () => {
@@ -237,7 +238,7 @@ describe('QuizPanel 最難聽發音選字（ja）', () => {
     s.active.set(0);
     await f.whenStable();
     btn('猫').click();
-    expect(player.play).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(player.play).toHaveBeenCalledTimes(1));
     s.active.set(1);
     await f.whenStable();
     btn('happy').click();

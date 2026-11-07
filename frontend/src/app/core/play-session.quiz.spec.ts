@@ -5,8 +5,8 @@ import { Rewards } from './rewards';
 import { Pronunciation } from './pronunciation';
 import { Question } from './game/quiz';
 import { parseLrc } from './game/lrc';
-import { tokenize } from './lang';
-import { Song } from './models/song.model';
+import { Lang, tokenize } from './lang';
+import { Song, Token } from './models/song.model';
 
 // 假句子（不放真實歌詞）
 const lines = tokenize(parseLrc('[00:01] red fox runs\n[00:03] the big blue boat\n[00:05] we can go now'), {});
@@ -21,13 +21,17 @@ const q = (i: number, w: string): Question => ({
   tries: 0,
 });
 
+const settle = () => new Promise((done) => setTimeout(done));
+
 function setup(level: 'normal' | 'hard' | 'expert' = 'normal') {
   const player = { play: vi.fn(), pause: vi.fn(), seek: vi.fn() };
   const rewards = { earn: vi.fn() };
+  const say = vi.fn((_t: Token, _L: Lang): Promise<void> => Promise.resolve());
   TestBed.configureTestingModule({
     providers: [
       { provide: YoutubePlayer, useValue: player },
       { provide: Rewards, useValue: rewards },
+      { provide: Pronunciation, useValue: { say, prefetch: vi.fn(), stop: vi.fn() } },
     ],
   });
   const s = TestBed.inject(PlaySession);
@@ -39,7 +43,7 @@ function setup(level: 'normal' | 'hard' | 'expert' = 'normal') {
   s.mode.set('quiz');
   s.quizLevel.set(level);
   s.questions.set([q(0, 'fox'), q(2, 'go')]);
-  return { s, player, rewards, qs: () => s.questions() as Question[] };
+  return { s, player, rewards, say, qs: () => s.questions() as Question[] };
 }
 
 describe('PlaySession 填填看', () => {
@@ -54,18 +58,55 @@ describe('PlaySession 填填看', () => {
     expect(player.play).not.toHaveBeenCalled();
   });
 
-  it('答對：done、active 清掉、同步 play()；已答過的再按沒反應', () => {
-    const { s, player, qs } = setup();
+  it('答對：done、active 清掉、同步唸單字，唸完才 play()；已答過的再按沒反應', async () => {
+    const { s, player, say, qs } = setup();
+    let spoken = () => {};
+    say.mockReturnValueOnce(new Promise<void>((done) => (spoken = done)));
     s.active.set(0);
     s.answer('fox');
     expect(qs()[0].done).toBe(true);
     expect(s.active()).toBeNull();
+    expect(say).toHaveBeenCalledTimes(1); // 同一個 click 裡
+    await settle();
+    expect(player.play).not.toHaveBeenCalled(); // 還在唸
+    spoken();
+    await settle();
     expect(player.play).toHaveBeenCalledTimes(1);
     s.answer('fox');
+    await settle();
     expect(player.play).toHaveBeenCalledTimes(1);
   });
 
-  it('補答中答對、還有漏的：跳到下一題那句（不是直接播放下去）', () => {
+  it('單字一直沒唸完：等到 3 秒上限就繼續播歌', async () => {
+    vi.useFakeTimers();
+    try {
+      const { s, player, say } = setup();
+      say.mockReturnValueOnce(new Promise<void>(() => {}));
+      s.active.set(0);
+      s.answer('fox');
+      await vi.advanceTimersByTimeAsync(2999);
+      expect(player.play).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(player.play).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('等單字唸完時換了玩法：唸完不播放', async () => {
+    const { s, player, say } = setup();
+    let spoken = () => {};
+    say.mockReturnValueOnce(new Promise<void>((done) => (spoken = done)));
+    Object.assign(player, { cue: vi.fn() });
+    s.active.set(0);
+    s.answer('fox');
+    s.setMode('listen');
+    spoken();
+    await settle();
+    expect(player.play).not.toHaveBeenCalled();
+  });
+
+  it('補答中答對、還有漏的：唸完跳到下一題那句（不是直接播放下去）', async () => {
     const { s, player } = setup();
     s.finish(); // 兩題都漏了
     expect(player.seek).toHaveBeenLastCalledWith(lines[0].t + 1 - 0.3);
@@ -73,12 +114,13 @@ describe('PlaySession 填填看', () => {
     player.play.mockClear();
     s.active.set(0);
     s.answer('fox');
+    await settle();
     expect(player.seek).toHaveBeenCalledExactlyOnceWith(lines[2].t + 1 - 0.3);
     expect(player.play).toHaveBeenCalledTimes(1);
     expect(s.finished()).toBe(false);
   });
 
-  it('有漏答：finish 進入補答並跳回那句；補完全部一次答對才 earn', () => {
+  it('有漏答：finish 進入補答並跳回那句；補完全部一次答對才 earn（唸完才結算）', async () => {
     const { s, player, rewards } = setup('hard');
     s.active.set(0);
     s.answer('fox');
@@ -88,6 +130,8 @@ describe('PlaySession 填填看', () => {
     expect(player.seek).toHaveBeenLastCalledWith(lines[2].t + 1 - 0.3);
     s.active.set(1);
     s.answer('go');
+    expect(s.finished()).toBe(false);
+    await settle();
     expect(s.finished()).toBe(true);
     expect(rewards.earn).toHaveBeenCalledWith(1, s.song(), 'quizHard');
     s.finish();
@@ -119,11 +163,7 @@ describe('PlaySession 填填看', () => {
   });
 
   it('最難聽發音（ja）：停下來時唸一次答案（之後的 tick 不重唸）；英文最難不唸', () => {
-    const say = vi.fn();
-    TestBed.configureTestingModule({
-      providers: [{ provide: Pronunciation, useValue: { say, prefetch: vi.fn() } }],
-    });
-    const { s, player } = setup('expert');
+    const { s, player, say } = setup('expert');
     Object.assign(player, { playing: () => true });
     s.song.set({ id: 'jademo', lang: 'ja', sticker: '🌸' } as Song);
     s.questions.set([{ ...q(0, '猫'), tok: { s: '猫', r: 'ねこ' } }]);

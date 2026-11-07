@@ -38,6 +38,8 @@ export interface SingSummary {
   missed: Token[]; // 要多練的字（en：norm 過的字；ja：原本的 token，帶讀音）
 }
 
+const SAY_MAX_MS = 3000; // 答對後最多等單字唸多久
+
 /**
  * 遊玩流程的唯一真相（architecture §4）。第二波各自只填自己負責的方法：
  * - E：open、onTick、setMode、setVideo、setOffset、tapWord（聽聽看）
@@ -45,7 +47,8 @@ export interface SingSummary {
  * - D：startSing、nextStop、finishSing（唱唱看，含伴奏）
  * 規則：流程不用 effect 驅動；陣列／物件 signal 一律 set()/update() 產生新值，不就地修改。
  * 這些 signal 只由本服務的方法寫入（parentOpen 例外，由 Play 的 <details> toggle 寫）。
- * iOS：answer()、nextStop() 等由點擊直接呼叫的方法，內部要同步呼叫 player.play()／recognizer.record()，不能先 await。
+ * iOS：nextStop() 等由點擊直接呼叫的方法，內部要同步呼叫 player.play()／recognizer.record()，不能先 await。
+ * 例外：answer() 答對後等單字唸完才 play()，不在點擊的同步鏈上；若 iOS 擋下，小朋友可按 ▶ 播放。
  */
 @Service()
 export class PlaySession {
@@ -91,6 +94,7 @@ export class PlaySession {
   private prevLine = -1; // onTick 上一次的目前句（記 heard 用；拖進度條跳太多不算）
   // 🔁 重播後停下來要再唸一次答案。不用 active.set(null)：題目畫面、按錯的選項會在重播時消失
   private resay = false;
+  private sayRun = 0; // 答對後等單字唸完；換玩法／換歌時遞增，等完發現變了就不再播放
 
   /** 開新的一局（E）。換了歌：videoIndex 歸 0；offset 讀 off_<videoId> 或預設。mode/quizLevel/singAll 沿用。依歌曲語言填 tokens。 */
   open(
@@ -154,6 +158,7 @@ export class PlaySession {
   /** 切換玩法並重新出題（E）。填填看依 quizLevel、唱唱看依 singAll（練習 = 前 8 句）。影片回到開頭並暫停。 */
   setMode(m: PlayMode): void {
     this.cancelSing(); // 換玩法時丟掉進行中的錄音／辨識、停伴奏
+    this.sayRun++;
     const lines = this.lines(),
       song = this.song();
     this.mode.set(m);
@@ -241,7 +246,7 @@ export class PlaySession {
     return v ? load('off_' + v.id, v.offset) : 0;
   }
 
-  /** 填填看作答（A）。點擊／Enter 時同步呼叫，答對後同步 player.play()。 */
+  /** 填填看作答（A）。點擊／Enter 時同步呼叫；答對後同步唸單字，唸完（最多等 SAY_MAX_MS）才繼續播歌，聲音才不會疊在一起。 */
   answer(word: string): void {
     const n = this.active();
     const q = n === null ? undefined : this.quizQs()[n];
@@ -256,12 +261,18 @@ export class PlaySession {
     this.active.set(null);
     const last = !qs.some((x) => !x.done);
     if (!last) this.sfx.correct(); // 最後一題會接慶祝音效，不要疊在一起
-    this.sayAnswer(q); // 答對唸一次單字，和舊版一樣
-    // 在點擊當下就播放，iOS 才不會擋
     const left = qs.find((x) => !x.done);
-    if (!this.makeup()) this.player.play();
-    else if (left) this.jumpTo(left);
-    else this.finishQuiz();
+    const run = ++this.sayRun;
+    // 答對唸一次單字；字典查很久或沒收到唸完事件時不能卡住
+    void Promise.race([
+      this.sayAnswer(q),
+      new Promise((done) => setTimeout(done, SAY_MAX_MS)),
+    ]).then(() => {
+      if (run !== this.sayRun) return;
+      if (!this.makeup()) this.player.play();
+      else if (left) this.jumpTo(left);
+      else this.finishQuiz();
+    });
   }
 
   /** 填填看「最難」而且這首歌的最難是聽發音選字（langOf(song).expert === 'listen'）。 */
@@ -274,8 +285,8 @@ export class PlaySession {
   }
 
   /** 唸題目的答案（照 token 自己的語言：日文唸讀音、日文歌裡的英文字照英文）。「🔊 再聽一次」點擊時同步呼叫。 */
-  sayAnswer(q: Question): void {
-    this.pron.say({ ...q.tok, s: q.w }, tokLang(q.tok, this.song() ?? {}));
+  sayAnswer(q: Question): Promise<void> {
+    return this.pron.say({ ...q.tok, s: q.w }, tokLang(q.tok, this.song() ?? {}));
   }
 
   private quizQs(): Question[] {
