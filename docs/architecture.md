@@ -430,6 +430,8 @@ fetch('config.json', { cache: 'no-store' })
 
 ## 12. 部署（Railway，兩個服務）
 
+實際架設步驟、環境變數、content.db 上傳：[deployment.md](deployment.md)。
+
 | | 後端（已定） | 前端 |
 |---|---|---|
 | Root Directory | `backend` | `frontend` |
