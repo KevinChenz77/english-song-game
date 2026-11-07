@@ -26,11 +26,11 @@ export class LyricsPanel {
   readonly dicts = input.required<Dicts>();
   protected readonly session = inject(PlaySession);
   protected readonly reading = inject(Reading);
-  /** 讀音切換按鈕：顯示的符號、名稱、下一個。 */
+  /** 讀音切換按鈕：顯示的符號、名稱。 */
   protected readonly MODE = {
-    hira: { sym: 'あ', name: '平假名', next: 'romaji' },
-    romaji: { sym: 'a', name: '羅馬拼音', next: 'off' },
-    off: { sym: '—', name: '關', next: 'hira' },
+    hira: { sym: 'あ', name: '平假名' },
+    romaji: { sym: 'a', name: '羅馬拼音' },
+    off: { sym: '—', name: '關' },
   } as const;
   private readonly player = inject(YoutubePlayer);
   /** 歌曲語言：[attr.lang]、要不要空白、有沒有讀音切換。 */

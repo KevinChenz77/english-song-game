@@ -24,7 +24,7 @@ export class SingPanel {
   private readonly reading = inject(Reading);
 
   protected readonly lang = computed(() => langOf(this.session.song() ?? {}));
-  protected readonly romaji = computed(() => this.reading.mode() === 'romaji');
+  protected readonly romaji = computed(() => this.reading.modeOf(this.lang()) === 'romaji');
 
   protected readonly level = signal(0);
   protected readonly stops = computed(() => this.session.questions() as SingStop[]);

@@ -24,7 +24,7 @@ import { Reading } from '../../core/reading';
         @let rt = reading.of(t, L);
         <div class="txt">
           @if (rt) {
-            <small [attr.lang]="reading.mode() === 'hira' ? L.code : L.code + '-Latn'">{{ rt }}</small>
+            <small [attr.lang]="reading.modeOf(L) === 'hira' ? L.code : L.code + '-Latn'">{{ rt }}</small>
           }
           <b [attr.lang]="L.code">{{ t.s }}</b>
           <span>{{ zh(t) || '（還沒有中文解釋）' }}</span>

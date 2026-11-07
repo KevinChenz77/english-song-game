@@ -126,7 +126,7 @@ export const tokLang = (t: Token, s: Pick<Song, 'lang'>) => (t.l ? LANGS[t.l] : 
 
 不放進設定的（YAGNI）：顯示方向（沒有 RTL 需求）、每語言 UI 文案（介面一律中文）。
 
-**加韓文／西班牙文**＝在 `LANGS` 加一筆（ko/es 都用空白斷詞，`split` 用 en 的；決定 `expert`、`quizRange`）、`build_content.py` 的 `LANGS` 加一筆（`tokens: None`，不需要讀音）、加 `dict.<code>.json`、歌曲 json 寫 `"lang"`。中文歌同理，若要注音再在 Python 端加讀音函式。
+**韓文已加入**（第一階段：聽聽看＋填填看）：`Lang.reading` 列出語言的讀音模式，ko 只有羅馬拼音／關；羅馬拼音由 `build_content.py` 的 `ko_romaji` 產生。**加西班牙文**＝在 `LANGS` 加一筆（空白斷詞；決定 `expert`、`quizRange`）、`build_content.py` 的 `LANGS` 加一筆（`tokens: None`，不需要讀音）、加 `dict.<code>.json`、歌曲 json 寫 `"lang"`。中文歌同理，若要注音再在 Python 端加讀音函式。
 
 ---
 

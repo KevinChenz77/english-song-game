@@ -86,10 +86,41 @@ def ja_tokens(text, readings):
     return out
 
 
+KO_INITIAL = "g kk n d tt r m b pp s ss _ j jj ch k t p h".split()
+KO_VOWEL = "a ae ya yae eo e yeo ye o wa wae oe yo u wo we wi yu eu ui i".split()
+# final as pronounced at the end of a syllable (index 0 = no final)
+KO_FINAL = " k k k n n n t l k m l l l p l m p p t t ng t t k t p t".split(" ")
+# final carried onto a following ㅇ (liaison); ponytail: compound finals keep their coda, fix those with "readings"
+KO_CARRY = {1: "g", 2: "kk", 4: "n", 7: "d", 8: "r", 16: "m", 17: "b", 19: "s", 20: "ss", 22: "j", 23: "ch", 24: "k", 25: "t", 26: "p", 27: ""}
+
+
+def ko_romaji(word):
+    """Revised Romanization with liaison and ㄹㄹ → ll. Other sound changes go in the song's "readings"."""
+    syl = [divmod(ord(c) - 0xAC00, 28) for c in word if "가" <= c <= "힣"]
+    out = ""
+    for n, (iv, fin) in enumerate(syl):
+        i, v = divmod(iv, 21)
+        nxt = syl[n + 1][0] // 21 if n + 1 < len(syl) else None
+        prev = syl[n - 1][1] if n else 0
+        head = KO_CARRY.get(prev, "") if i == 11 else "l" if i == 5 and prev == 8 else KO_INITIAL[i]
+        out += head + KO_VOWEL[v] + ("" if nxt == 11 and fin in KO_CARRY else KO_FINAL[fin])
+    return out
+
+
+def ko_tokens(text, readings):
+    """[[s, None, ro], ...]: one token per space-separated word; r stays empty so TTS and scoring use the Hangul."""
+    out = []
+    for s in text.split():
+        base = EDGE_PUNCT.sub("", s)
+        out.append([s, None, readings.get(base) or ko_romaji(base) or None])
+    return out
+
+
 # Per-language behaviour, mirrors frontend core/lang.ts LANGS. MyMemory always gets f"{code}|zh-TW".
 LANGS = {
     "en": {"tokens": None, "match": re.compile(r"^[A-Za-z][A-Za-z'’]*$")},  # same as frontend LANGS.en.match
     "ja": {"tokens": ja_tokens, "match": None},
+    "ko": {"tokens": ko_tokens, "match": None},
 }
 
 
@@ -260,6 +291,11 @@ def check():
     for sid in ids:
         assert isinstance(sid, str) and SONG_ID.fullmatch(sid), sid
         assert source_error(json.loads((SONGS_DIR / f"{sid}.json").read_text(encoding="utf-8"))) is None, sid
+    # Korean romanization: made-up words; liaison, ㄹㄹ, finals, double initials, readings override, foreign token
+    assert [ko_romaji(w) for w in ("한글", "음악", "빨리", "꽃", "있어", "강아지", "달력", "좋아")] == \
+        ["hangeul", "eumak", "ppalli", "kkot", "isseo", "gangaji", "dallyeok", "joa"], [ko_romaji(w) for w in ("한글", "음악", "빨리", "꽃", "있어", "강아지", "달력", "좋아")]
+    assert tag_foreign(ko_tokens("강아지, 달력 happy", {"달력": "dallyeog"}), "ko") == \
+        [["강아지,", None, "gangaji"], ["달력", None, "dallyeog"], ["happy", None, None, "en"]]
     try:
         _ja()
     except ImportError:
