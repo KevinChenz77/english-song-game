@@ -25,6 +25,7 @@
    - `backend/tools/build_content.py` 依 `index.json` 和每首的 `lrclibId` 抓歌詞、產生整句翻譯，輸出本機 `content.db`（用法見該檔 `--help`）。
    - `POST /api/admin/content`（`Authorization: Bearer <ADMIN_TOKEN>`，body＝整個 db 檔）。⚠️ 上傳是**整檔替換**：db 裡必須包含**所有**歌，不是只有新的那首，否則舊歌會變「這首歌的歌詞還沒準備好」。
    - content.db 不 commit；ADMIN_TOKEN 不寫進任何檔案。
+   - 上傳指令、回應代碼和雲端檢查見 [deployment.md](deployment.md)。
 9. **跑檢查**：
    ```bash
    cd frontend && npx ng test --watch=false && npx ng build
