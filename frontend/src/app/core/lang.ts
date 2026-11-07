@@ -32,7 +32,6 @@ export interface Lang {
   };
 }
 
-
 /** NFKC → 小寫 → 片假名轉平假名 → 去標點、符號、空白。 */
 const jaNorm = (s: string) =>
   s
@@ -78,7 +77,6 @@ export const LANGS: Record<string, Lang> = {
       pass: 0.7,
       junk: /^(\[.*\]|\(.*\)|thank you\.?|you\.?|\.+)$/i, // Whisper 沒聽到東西時常冒出這些
     },
-    // ponytail：母音群數粗估音節（字尾單獨的 e 不算），夠用來分配時間
   },
   ja: {
     code: 'ja',
@@ -108,7 +106,6 @@ export const LANGS: Record<string, Lang> = {
       // 沒聽到東西時 Whisper 常冒出 YouTube 字幕的固定句（實測靜音：「さて、この動画を見てくれてありがとう!」）
       junk: /^(\[.*\]|\(.*\)|（.*）|おやすみなさい。?|[.。、…!！?？\s]+)$|ご視聴|チャンネル登録|動画を見て/,
     },
-    // 音拍：讀音的假名數，小寫的ゃゅょぁぃぅぇぉ不算（っ、ー、ん算一拍）
   },
   ko: {
     code: 'ko',

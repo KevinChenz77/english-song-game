@@ -31,7 +31,7 @@ export interface Token {
   l?: string;
 }
 
-/** parseLrc 的一句。stamps＝Enhanced LRC 逐字時間：at＝text 裡的字元位置，t＝秒。 */
+/** parseLrc 的一句。stamps＝Enhanced LRC 逐字時間：at＝text 裡的字元位置，t＝秒（目前畫面沒用到）。 */
 export interface LrcLine {
   t: number;
   end: number;

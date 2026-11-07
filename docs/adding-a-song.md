@@ -66,7 +66,7 @@
 6. 「產生 LRC」：工具會檢查去掉時間戳後每句和原句一字不差，不一致就不輸出。
 7. 把結果存成**主 repo** 的 `data/lrc/<id>.lrc`（`data/` 已在 .gitignore，**不會也不能 commit**）。⚠️ 這個檔案只在你的電腦上：**自己備份**（例如私人雲端硬碟），電腦壞了只能重敲（content.db 裡也有一份完整 LRC 可以救回）。
 8. LRCLIB 沒有的歌：json 寫 `"localLrc": true`、**不寫** `lrclibId`（兩個剛好一個）；照常跑 `build_content.py`（找不到 `data/lrc/<id>.lrc` 會報錯）、上傳。
-9. 已上線的歌想修時間／加逐字時間：同樣存 `data/lrc/<id>.lrc` 就會覆蓋 LRCLIB，json 不用改。
+9. 已上線的歌想修時間：同樣存 `data/lrc/<id>.lrc` 就會覆蓋 LRCLIB，json 不用改。
 10. 微調：個別句子直接改 `.lrc` 的時間；整體差幾秒就改 json 的 `offset`。
 
 韓文歌（`"lang": "ko"`）同上：後端產生羅馬拼音（`ko_romaji`，含連音和 ㄹㄹ），其他音變用 `readings` 逐詞覆蓋，值寫羅馬拼音。字典是 `dict.ko.json`。
