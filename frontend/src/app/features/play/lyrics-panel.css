@@ -27,11 +27,14 @@
 .line.past {
   color: var(--muted);
 }
-/* 目前句：不改字級／字重（避免重新排版），只換底色、文字色和左邊色條 */
+/* 目前句：底色、文字色、左邊色條，歌詞粗體（PO 要的；字變寬偶爾會多折一行） */
 .line.now {
   background: var(--hl-bg, #fff6d6);
   color: var(--ink);
   box-shadow: inset 4px 0 0 var(--hl);
+}
+.line.now .en {
+  font-weight: 700;
 }
 .line.ok .en::after {
   content: ' ✅';
