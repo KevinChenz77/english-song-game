@@ -138,10 +138,7 @@ export class PlaySession {
     }
     if (this.mode() === 'listen') {
       // 最後一句唱完才給，慶祝不會在歌唱到一半跳出來；之後每個 tick 都會再呼叫，Rewards.earn 每首歌每項只給一次
-      const kidId = this.kidId(),
-        song = this.song();
-      if (t >= lines.at(-1)!.end && this.heard().size >= lines.length * 0.8 && kidId !== null && song)
-        this.rewards.earn(kidId, song, 'listen');
+      if (t >= lines.at(-1)!.end) this.earnListen();
       return;
     }
     // 填填看和唱唱看共用：唱到句尾就停下來
@@ -308,7 +305,18 @@ export class PlaySession {
     const m = this.mode();
     if (m === 'quiz') this.finishQuiz();
     else if (m === 'sing') this.finishSing();
-    else this.finished.set(true);
+    else {
+      this.earnListen(); // 影片比最後一句的 end（開始 +5 秒）早結束
+      this.finished.set(true);
+    }
+  }
+
+  /** 聽聽看：照順序聽過 80% 的句子才給。 */
+  private earnListen(): void {
+    const kidId = this.kidId(),
+      song = this.song();
+    if (this.heard().size >= this.lines().length * 0.8 && kidId !== null && song)
+      this.rewards.earn(kidId, song, 'listen');
   }
 
   /** 填填看結算（A）：該難度全一次答對才 earn。 */

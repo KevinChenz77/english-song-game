@@ -126,6 +126,16 @@ describe('PlaySession', () => {
     expect(s.finished()).toBe(false);
   });
 
+  it('聽聽看：影片在最後一句 end 前結束，finish() 時聽過 80% 也給', () => {
+    const { s, earned } = setup();
+    s.open(7, song, lines, {});
+    s.setOffset(0);
+    for (let t = 10; t < 29; t += 0.5) s.onTick(t);
+    expect(earned).toEqual([]);
+    s.finish();
+    expect(earned).toEqual(['demo:listen']);
+  });
+
   it('聽聽看：拖到最後一句，聽不到 80% 不給', () => {
     const { s, earned } = setup();
     s.open(7, song, lines, {});
