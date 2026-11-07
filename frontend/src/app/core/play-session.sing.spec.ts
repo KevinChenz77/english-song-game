@@ -59,7 +59,7 @@ describe('PlaySession 唱唱看', () => {
             play: (t: number) => calls.push(`kara ${t}`),
             stop: () => calls.push('karaStop'),
             create: (v?: { id: string }) => calls.push(`create ${v?.id}`),
-            destroy: () => {},
+            destroy: () => calls.push('karaDestroy'),
             on: () => true,
           },
         },
@@ -225,7 +225,7 @@ describe('PlaySession 唱唱看', () => {
     await fixture.whenStable();
     s.videoIndex.set(1);
     await fixture.whenStable();
-    expect(calls.filter((c) => c.startsWith('create'))).toEqual(['create one', 'create two']);
+    expect(calls).toEqual(['create one', 'karaDestroy', 'create two']);
   });
 
   it('面板：練習失敗 3 次後跳過按鈕變「不扣分」，挑戰一律「先跳過」', async () => {
