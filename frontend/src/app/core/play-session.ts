@@ -44,7 +44,7 @@ const SAY_MAX_MS = 3000; // 答對後最多等單字唸多久
  * 遊玩流程的唯一真相（architecture §4）。第二波各自只填自己負責的方法：
  * - E：open、onTick、setMode、setVideo、setOffset、tapWord（聽聽看）
  * - A：answer、finishQuiz（填填看）
- * - D：startSing、nextStop、finishSing（唱唱看，含伴奏）
+ * - D：startSing、nextStop、finishSing（唱唱看，含原唱）
  * 規則：流程不用 effect 驅動；陣列／物件 signal 一律 set()/update() 產生新值，不就地修改。
  * 這些 signal 只由本服務的方法寫入（parentOpen 例外，由 Play 的 <details> toggle 寫）。
  * iOS：nextStop() 等由點擊直接呼叫的方法，內部要同步呼叫 player.play()／recognizer.record()，不能先 await。
@@ -56,7 +56,7 @@ export class PlaySession {
   private readonly rewards = inject(Rewards);
   private readonly recognizer = inject(SpeechRecognizer);
   private readonly pron = inject(Pronunciation);
-  private readonly backing = inject(BackingTrack); // 唱唱看伴奏（D）
+  private readonly backing = inject(BackingTrack); // 唱唱看原唱（D）
   private readonly sfx = inject(Sfx);
   private singRun = 0; // 唱唱看錄音／辨識的次數；舊的結果對不上就丟掉（D）
 
@@ -159,7 +159,7 @@ export class PlaySession {
   /** 切換玩法並重新出題（E）。填填看依 quizLevel、唱唱看依 singAll（練習 = 前 8 句）。影片回到開頭並暫停。 */
   setMode(m: PlayMode): void {
     if (this.makeup()) this.finishQuiz(); // 補答最後一題還在等唸完：下面會取消後續，先結算才不會掉獎勵
-    this.cancelSing(); // 換玩法時丟掉進行中的錄音／辨識、停伴奏
+    this.cancelSing(); // 換玩法時丟掉進行中的錄音／辨識、停原唱
     this.sayRun++;
     const lines = this.lines(),
       song = this.song();
@@ -364,7 +364,7 @@ export class PlaySession {
 
   /**
    * 「🎤 換你唸」（D）。必須在點擊當下同步呼叫 recognizer.record()，之前不能有 await。
-   * 順序：同步 record() → 暫停影片 → 同步伴奏 play()，之後才 await。onLevel 收 0～1 音量。
+   * 順序：同步 record() → 暫停影片 → 同步原唱 play()，之後才 await。onLevel 收 0～1 音量。
    */
   async startSing(onLevel: (level: number) => void = () => {}): Promise<void> {
     const idx = this.active();
@@ -376,7 +376,7 @@ export class PlaySession {
     const L = langOf(song ?? {}); // 模型、評分、門檻跟歌曲語言
     this.pron.stop(); // 開始錄音前停掉單字發音
     this.patchStop(idx, { state: 'rec', msg: undefined });
-    const rec = this.recognizer.record(onLevel); // 先開麥克風，再開伴奏，都在點擊當下
+    const rec = this.recognizer.record(onLevel); // 先開麥克風，再開原唱，都在點擊當下
     this.player.pause();
     this.backing.play(line.t);
     // 只在這句還是同一次錄音／辨識時才寫回（換模式、跳過後就丟掉結果）

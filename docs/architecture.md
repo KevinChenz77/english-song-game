@@ -143,7 +143,7 @@ destroy(): void      // player.destroy()、clearInterval、ready/playing 設回 
 play() / pause() / seek(t) / cue(videoId) / currentTime()
 ready / playing / error   // signals
 ```
-- `iframe_api` script 由共用的 `core/youtube-api.ts` `loadYouTubeApi()` 插入（只插一次，唱唱看伴奏也用）；`onReady` 後每 100ms 呼叫 `onTick(currentTime)`。
+- `iframe_api` script 由共用的 `core/youtube-api.ts` `loadYouTubeApi()` 插入（只插一次，唱唱看背景原唱也用）；`onReady` 後每 100ms 呼叫 `onTick(currentTime)`。
 - `Play` 元件在自己的歌曲設定＋歌詞都載入（`song.hasValue() && content.hasValue()`，effect 已先 `open()`）後，以 `afterRenderEffect` 呼叫 `create(el, id, t => session.onTick(t), () => session.finish())`（以 `createdFor = song.id` 記錄，每首歌一次；`videoIndex` 用 `untracked` 讀），並用 `inject(DestroyRef).onDestroy(() => player.destroy())`。離開畫面再回來是全新的 player、全新的計時器，不殘留 `ready`。
 - 兩個 callback 由 `Play` 傳入，所以 `YoutubePlayer` 不 inject `PlaySession`。
 

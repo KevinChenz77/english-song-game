@@ -106,7 +106,7 @@ describe('public/songs 歌曲資料', () => {
         if (localLrc !== undefined) expect(localLrc, 'localLrc').toBe(true);
       });
 
-      it('影片：至少一支，videoId 11 碼、有 label、offset 是數字；karaoke 選填', () => {
+      it('影片：至少一支，videoId 11 碼、有 label、offset 是數字', () => {
         expect(song.videos.length).toBeGreaterThan(0);
         for (const v of song.videos) {
           expect(v.id).toMatch(YT_ID);

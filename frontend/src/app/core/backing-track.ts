@@ -50,7 +50,7 @@ export class BackingTrack {
     const v = this.video;
     if (!this.on() || !this.ready || !v) return;
     try {
-      this.yt.seekTo(t + load('off_' + v.id, v.offset) - 0.3, true);
+      this.yt.seekTo(Math.max(0, t + load('off_' + v.id, v.offset) - 0.3), true);
       this.yt.setVolume(KARA_VOL);
       this.yt.playVideo();
     } catch {

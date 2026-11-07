@@ -58,7 +58,7 @@ describe('PlaySession 唱唱看', () => {
           useValue: {
             play: (t: number) => calls.push(`kara ${t}`),
             stop: () => calls.push('karaStop'),
-            create: () => {},
+            create: (v?: { id: string }) => calls.push(`create ${v?.id}`),
             destroy: () => {},
             on: () => true,
           },
@@ -78,7 +78,7 @@ describe('PlaySession 唱唱看', () => {
     s.questions.set(lines.slice(0, n).map((l, i) => ({ i, endT: l.end, done: false, tries: 0 })));
   const q = (i: number) => (s.questions() as SingStop[])[i];
 
-  it('換你唸：同步 record() → 暫停影片 → 伴奏，在第一個 await 之前', () => {
+  it('換你唸：同步 record() → 暫停影片 → 原唱，在第一個 await 之前', () => {
     s.active.set(1);
     void s.startSing();
     expect(calls).toEqual(['record', 'pause', 'kara 3']);
@@ -216,6 +216,16 @@ describe('PlaySession 唱唱看', () => {
     finishWith(0);
     expect(earn).toHaveBeenCalledWith(1, song, 'singPractice');
     expect(s.finished()).toBe(true);
+  });
+
+  it('面板：背景原唱跟著目前的影片版本', async () => {
+    const v = (id: string) => ({ id, label: id, offset: 0 });
+    s.song.set({ ...song, videos: [v('one'), v('two')] });
+    const fixture = TestBed.createComponent(SingPanel);
+    await fixture.whenStable();
+    s.videoIndex.set(1);
+    await fixture.whenStable();
+    expect(calls.filter((c) => c.startsWith('create'))).toEqual(['create one', 'create two']);
   });
 
   it('面板：練習失敗 3 次後跳過按鈕變「不扣分」，挑戰一律「先跳過」', async () => {
