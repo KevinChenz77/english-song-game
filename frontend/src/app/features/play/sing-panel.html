@@ -112,14 +112,18 @@
         }
       </div>
       <div class="opts">
-        <button
-          type="button"
-          class="switch"
-          [attr.aria-pressed]="backing.on()"
-          (click)="backing.toggle()"
-        >
-          {{ backing.on() ? '🎵 伴奏：開' : '🎵 伴奏：關' }}<i aria-hidden="true"></i>
-        </button>
+        @if (session.song()?.karaoke) {
+          <button
+            type="button"
+            class="switch"
+            [attr.aria-pressed]="backing.on()"
+            (click)="backing.toggle()"
+          >
+            {{ backing.on() ? '🎵 伴奏：開' : '🎵 伴奏：關' }}<i aria-hidden="true"></i>
+          </button>
+        } @else {
+          <span class="hint">這首歌沒有伴奏</span>
+        }
         <span class="hint">戴耳機唸，辨識會比較準 🎧</span>
       </div>
     } @else {
