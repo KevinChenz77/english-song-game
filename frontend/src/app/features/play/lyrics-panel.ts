@@ -10,12 +10,11 @@ import {
 import { PlaySession } from '../../core/play-session';
 import { YoutubePlayer } from '../../core/youtube-player';
 import { lookup } from '../../core/game/text';
-import { karaokeTimes } from '../../core/game/karaoke';
 import { Dicts, langOf, tokLang } from '../../core/lang';
 import { Reading } from '../../core/reading';
 import { Token } from '../../core/models/song.model';
 
-/** 歌詞：目前句高亮＋自動捲動、卡拉 OK 逐字亮、填空、▶ seek、單字 chip、中文（家長模式可改）。 */
+/** 歌詞：目前句高亮＋自動捲動、填空、▶ seek、單字 chip、中文（家長模式可改）。 */
 @Component({
   selector: 'app-lyrics-panel',
   templateUrl: './lyrics-panel.html',
@@ -37,7 +36,7 @@ export class LyricsPanel {
   protected readonly lang = computed(() => langOf(this.session.song() ?? {}));
   private readonly box = viewChild.required<ElementRef<HTMLElement>>('box');
 
-  /** 每句的字、填空位置、單字 chip、卡拉 OK 時間（只在歌詞／題目／字典變的時候重算）。 */
+  /** 每句的字、填空位置、單字 chip（只在歌詞／題目／字典變的時候重算）。 */
   protected readonly rows = computed(() => {
     const dicts = this.dicts();
     const song = this.session.song() ?? {};
@@ -61,20 +60,11 @@ export class LyricsPanel {
       return {
         l,
         words,
-        times: karaokeTimes(l, song),
         chips,
         blankOk: !!blank?.done,
         passed: !!(q && 'passed' in q && q.passed),
       };
     });
-  });
-
-  /** 卡拉 OK：目前句已經過了幾個 token 的開始時間（karaokeTimes）。 */
-  protected readonly sung = computed(() => {
-    const i = this.session.currentLine();
-    if (i < 0) return 0;
-    const t = this.session.time();
-    return this.rows()[i]?.times.filter((x) => x < t).length ?? 0;
   });
 
   constructor() {

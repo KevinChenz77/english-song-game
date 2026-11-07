@@ -2,6 +2,9 @@
 
 > 狀態：設計稿（2026-11-02，前端架構師）；PO 已回覆 5 個問題（§9）。只有文件，還沒寫程式。API 變更由 TPM 定案（見 §4.3）。
 > 目標：加一個語言＝**加一筆語言設定＋歌曲 json**；歌曲只宣告 `lang`。沒有 `lang` 的歌＝`'en'`，英文歌的行為、資料、測試**完全不變**（唯一例外：卡拉 OK 亮字改得更準，PO 已核准，見 §5.1）。
+
+> **2026-11-07 更新（PO 決定）**：拿掉逐字亮，歌詞只亮目前整句（`.line.now`）。`karaoke.ts`、`Lang.units` 已刪；本文件 D11、§5.1 和其他提到卡拉 OK 亮字的地方只留作歷史。`parseLrc` 還是吃得下 Enhanced LRC。
+
 > 日文原型 3 首：Butter-Fly（LRCLIB 13072731，58 句，漢字＋假名＋少量英文，約 165 BPM）、「あいうえーお！のうた」（`QrKpAHk7u8k`，121 秒）、「ひらがなのうた」（`8IpHIUxhdaI`，113 秒）。兩首五十音歌 **LRCLIB 沒有**，要手動對時間。
 > 第一期：聽聽看＋填填看。第二期：唱唱看。
 
@@ -199,7 +202,6 @@ LANGS = {
 | 讀音切換 | `reading` 的歌在歌詞面板上方一個按鈕：「讀音：平假名 → 羅馬拼音 → 關」，**預設平假名**，存 localStorage `reading`（新鍵，per 裝置）。平假名模式只標有漢字的 token；羅馬拼音模式每個 token 都標 |
 | 字型 | `styles.css` 加 `:lang(ja) { font-family: system-ui, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic', sans-serif; }`；歌詞、題目、唱唱看、單字小視窗的容器設 `[attr.lang]="歌曲語言"`，外語 token 的按鈕設自己的 `lang`。不載網路字型（iPad 內建 Hiragino）。少了 `lang="ja"`，漢字會用繁中字形顯示（例如「直」「骨」寫法不同） |
 | 字間距 | ja `spaced=false`：token 之間不插空白，按鈕 `margin-inline: .12em`，看得出哪裡可以點 |
-| 卡拉 OK | 仍是 `.w.sung` 逐 token 亮，時間來自 `karaokeTimes()`（§5.1），ruby 跟著按鈕變色 |
 | 單字小視窗 | ja：大字原文＋讀音（照目前的讀音切換）＋中文；🔊 唸平假名讀音。英文 token 和英文歌一樣 |
 | 填填看選項（普通、挑戰） | 每個選項＝ruby 原文＋中文；空格 `＿` 依字數 |
 | 選歌卡片 | `lang !== 'en'` 時卡片角落一個小標籤（`lang.name`），不做篩選（歌少） |

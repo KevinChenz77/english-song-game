@@ -40,11 +40,9 @@
             ▶
           </button>
         }
-        @for (w of r.words; track $index; let k = $index) {
+        @for (w of r.words; track $index) {
           @if (w.blank) {
-            <span class="blank" [class.ok]="r.blankOk" [class.sung]="now && k < sung()">{{
-              w.t.s
-            }}</span>
+            <span class="blank" [class.ok]="r.blankOk">{{ w.t.s }}</span>
           } @else {
             @let rt = reading.of(w.t, w.L);
             <button
@@ -52,7 +50,6 @@
               class="w"
               [attr.lang]="w.L === lang() ? null : w.L.code"
               [class.known]="w.known"
-              [class.sung]="now && k < sung()"
               (click)="session.tapWord(w.t)"
             >@if (rt) {<ruby>{{ w.t.s }}<rt>{{ rt }}</rt></ruby>} @else {{{ w.t.s }}}</button>
           }
