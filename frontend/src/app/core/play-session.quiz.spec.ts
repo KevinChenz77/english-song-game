@@ -118,6 +118,20 @@ describe('PlaySession 填填看', () => {
     expect(rewards.earn).toHaveBeenCalledExactlyOnceWith(1, s.song(), 'quizHard');
   });
 
+  it('補答最後一題還在等唸完就換歌：獎勵記在舊歌、舊小朋友，只給一次', async () => {
+    const { s, rewards, say } = setup();
+    const old = s.song();
+    s.finish();
+    s.questions.update((qs) => (qs as Question[]).map((x, k) => ({ ...x, done: k === 0 })));
+    say.mockReturnValueOnce(new Promise<void>(() => {}));
+    s.active.set(1);
+    s.answer('go');
+    const other = { id: 'other', sticker: '🌸', videos: [], quiz: { normal: [], hard: [], expert: [] } };
+    s.open(2, other as unknown as Song, parseLrc('[00:01] a small green frog'), {});
+    await settle();
+    expect(rewards.earn).toHaveBeenCalledExactlyOnceWith(1, old, 'quizNormal');
+  });
+
   it('等單字唸完時已經結算：唸完不播放', async () => {
     const { s, player, say } = setup();
     let spoken = () => {};
