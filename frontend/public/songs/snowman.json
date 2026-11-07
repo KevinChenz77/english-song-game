@@ -8,7 +8,6 @@
   "videos": [
     { "id": "TeQ_TTyLGMs", "label": "Sing-Along 版", "offset": 0 }
   ],
-  "karaoke": { "id": "j0I9UJxkE80", "offset": -2.4 },
   "sticker": "⛄",
   "quiz": {
     "normal": ["door", "play", "ride", "walls", "rooms", "build", "best", "wish", "hang", "okay"],

@@ -1,4 +1,4 @@
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { PlaySession, SingStop } from '../../core/play-session';
 import { SpeechRecognizer } from '../../core/speech-recognizer';
@@ -9,7 +9,7 @@ import { Reading } from '../../core/reading';
 import { isPractice } from '../../core/game/scoring';
 import { Token } from '../../core/models/song.model';
 
-/** 唱唱看面板（D）。狀態都在 PlaySession，這裡只有音量條。顯示時＝進入唱唱看：載模型、建伴奏。 */
+/** 唱唱看面板（D）。狀態都在 PlaySession，這裡只有音量條。顯示時＝進入唱唱看：載模型、建背景原唱。 */
 @Component({
   selector: 'app-sing-panel',
   imports: [NgTemplateOutlet],
@@ -55,11 +55,12 @@ export class SingPanel {
 
   constructor() {
     void this.recognizer.load(this.lang()).catch(() => {}); // 這首歌語言的模型；失敗訊息在 recognizer.note
-    this.backing.create(this.session.song()?.karaoke);
-    inject(DestroyRef).onDestroy(() => {
-      this.session.cancelSing();
-      this.backing.destroy();
+    // 背景原唱跟著目前的歌和影片版本（換版本時面板不會重建）
+    effect((onCleanup) => {
+      this.backing.create(this.session.song()?.videos[this.session.videoIndex()]);
+      onCleanup(() => this.backing.destroy());
     });
+    inject(DestroyRef).onDestroy(() => this.session.cancelSing());
   }
 
   /** 這個 token 要標的讀音（照讀音切換；英文 token 沒有）。 */
@@ -72,7 +73,7 @@ export class SingPanel {
     this.session.setMode('sing');
   }
 
-  /** 「🎤 換你唸」：同步進 startSing（iOS 麥克風＋伴奏要在點擊當下）。 */
+  /** 「🎤 換你唸」：同步進 startSing（iOS 麥克風＋原唱要在點擊當下）。 */
   protected sing(): void {
     this.level.set(0);
     void this.session.startSing((v) => this.level.set(v));

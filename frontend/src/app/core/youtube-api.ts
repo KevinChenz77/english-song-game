@@ -3,7 +3,7 @@ export type YTNamespace = any;
 
 let loading: Promise<YTNamespace> | null = null;
 
-/** 載入 YouTube iframe API，只插一次 script；主播放器（YoutubePlayer）與唱唱看伴奏共用。 */
+/** 載入 YouTube iframe API，只插一次 script；主播放器（YoutubePlayer）與唱唱看原唱共用。 */
 export function loadYouTubeApi(): Promise<YTNamespace> {
   const w = window as unknown as { YT?: YTNamespace; onYouTubeIframeAPIReady?: () => void };
   if (w.YT?.Player) return Promise.resolve(w.YT);

@@ -18,7 +18,6 @@ export interface Song {
   from: string;
   emoji: string;
   videos: SongVideo[]; // 第一支為預設
-  karaoke?: { id: string; offset: number }; // 唱唱看伴奏（純音樂）影片；沒有就不放伴奏
   sticker: string; // 填填看「挑戰」全對的專屬貼紙
   quiz: Record<QuizLevel, string[]>; // 每個難度手動列的題目單字（字數範圍＝LANGS[lang].quizRange）
   dict?: Record<string, string>; // 這首歌專用／覆蓋共用字典的解釋

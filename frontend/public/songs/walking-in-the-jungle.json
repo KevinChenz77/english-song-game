@@ -8,7 +8,6 @@
   "videos": [
     { "id": "GoSq-yZcJ-4", "label": "官方 MV", "offset": -3.5 }
   ],
-  "karaoke": { "id": "-QpoNJEek7E", "offset": 0 },
   "sticker": "🐯",
   "quiz": {
     "normal": ["walk", "jungle", "stop", "listen", "jump", "run", "frog", "monkey", "tiger", "afraid"],

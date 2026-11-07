@@ -2,7 +2,7 @@
 
 > 狀態：設計稿（2026-11-02，前端架構師）；PO 已回覆 5 個問題（§9）。只有文件，還沒寫程式。API 變更由 TPM 定案（見 §4.3）。
 > 目標：加一個語言＝**加一筆語言設定＋歌曲 json**；歌曲只宣告 `lang`。沒有 `lang` 的歌＝`'en'`，英文歌的行為、資料、測試**完全不變**（唯一例外：卡拉 OK 亮字改得更準，PO 已核准，見 §5.1）。
-> 日文原型 3 首：Butter-Fly（LRCLIB 13072731，58 句，漢字＋假名＋少量英文，約 165 BPM）、「あいうえーお！のうた」（`QrKpAHk7u8k`，121 秒）、「ひらがなのうた」（`8IpHIUxhdaI`，113 秒）。兩首五十音歌 **LRCLIB 沒有**，要手動對時間；**都沒有伴奏影片**。
+> 日文原型 3 首：Butter-Fly（LRCLIB 13072731，58 句，漢字＋假名＋少量英文，約 165 BPM）、「あいうえーお！のうた」（`QrKpAHk7u8k`，121 秒）、「ひらがなのうた」（`8IpHIUxhdaI`，113 秒）。兩首五十音歌 **LRCLIB 沒有**，要手動對時間。
 > 第一期：聽聽看＋填填看。第二期：唱唱看。
 
 ---
@@ -74,7 +74,7 @@
 | `backend/main.py:207-219` | 回 `{lrc, translations}` | 多回選填的 `tokens`（§4.3） |
 | `core/songs-data.spec.ts:2,12-16,28-35,53-56,72-86` | `dict.json`、en `norm`、固定題數、`lrclibId` | 依 `lang` 檢查（§7） |
 
-不用改：`translations.ts`（以整句原文當 key，日文一樣可用）、`rewards.ts`、`kid.model.ts`、存檔格式、`youtube-*`、`backing-track.ts`（沒有 `karaoke` 已經會安靜跳過）。
+不用改：`translations.ts`（以整句原文當 key，日文一樣可用）、`rewards.ts`、`kid.model.ts`、存檔格式、`youtube-*`、`backing-track.ts`。
 
 ---
 
@@ -304,7 +304,6 @@ LANGS = {
   4. 微調：在遊戲家長設定調整體時間差，個別句子直接改 `.lrc`。
 - **已上線的歌想要逐字亮／修停點**（任何語言）：同一個工具，先貼 LRCLIB 的 LRC，敲完存 `data/lrc/<id>.lrc`，重建上傳。json 不用改。
 - 讀音錯了：在歌曲 json 的 `readings` 加 `{ 詞: 正確平假名 }`，重建 content.db。
-- 沒有伴奏影片就不放 `karaoke`（兩首五十音歌都是）。
 - 上傳仍是整檔替換：db 必須含**所有**語言的所有歌。
 
 ---

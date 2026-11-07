@@ -155,7 +155,7 @@ button.mode.on {
   transition: width 0.1s;
 }
 
-/* ── 伴奏開關＋耳機提示：小小一列，不搶麥克風 ── */
+/* ── 原唱開關：小小一列，不搶麥克風 ── */
 .opts {
   display: flex;
   flex-wrap: wrap;
