@@ -436,8 +436,9 @@ fetch('config.json', { cache: 'no-store' })
 | 資料 | `DATA_DIR=/data`，Volume 掛 `/data` | 無 |
 | 環境變數 | `ALLOWED_ORIGINS=<前端網址>` | `API_URL=<後端網址>` |
 | 健康檢查 | `/api/health` | `/`（`index.html`） |
-| 建置 | — | `npm ci && npx ng build` |
-| 啟動 | 後端自訂 | `test -n "$API_URL"` 失敗就退出 → 寫入 `dist/frontend/browser/config.json`（`{"apiBaseUrl":"$API_URL"}`）→ 靜態伺服器（DevOps 選） |
+| 建置 | Railpack（`requirements.txt`、`.python-version`） | Railpack（`npm ci`，Node 24 依 `engines`）＋ `npm run build` |
+| 啟動 | `uvicorn main:app --host 0.0.0.0 --port $PORT` | `npm run start:prod`：`API_URL` 沒設就退出 → 寫入 `config.json` → `serve -s`（SPA 回退；`public/serve.json` 讓 index.html、config.json、songs/ 不快取） |
+| 設定檔 | `backend/railway.json` | `frontend/railway.json`（Railway 的 Config File 要填 `/frontend/railway.json`，Root Directory 不會套用到它） |
 
 前端靜態伺服器需求：未知路徑回 `index.html`（SPA 回退）；`config.json` 與 `index.html` 設 `Cache-Control: no-cache`；其餘帶 hash 的檔案可長期快取；必須 HTTPS（麥克風需要）。
 
