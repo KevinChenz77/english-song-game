@@ -13,7 +13,6 @@
 3. **影片與時間差**：
    - `videos`：至少一支 YouTube（第一支是預設），每支一個 `label`（下拉選單文字）和 `offset`（秒；>0＝歌詞延後顯示）。影片要能嵌入播放。
    - `offset` 怎麼抓：先填 0，在遊戲裡用時間差調整到歌詞剛好對上，把調好的數字抄回 json（遊戲裡的調整只存在那台裝置的 `off_<videoId>`）。
-   - `karaoke`（選填）：唱唱看用的**純音樂伴奏**影片＋它自己的 `offset`。沒有就不放，唱唱看就沒有伴奏。
 4. **貼紙**：一個 emoji → `sticker`（填填看「挑戰」全對時拿到）。**每首歌都要不一樣**，也不能用 🎤、👑（那兩個是唱唱看的共用貼紙）。另外選一個 `emoji` 當選歌卡片圖示（可以跟貼紙一樣）。
 5. **填填看單字（教育顧問提供）**：英文 `quiz.normal` **10 個**、`quiz.hard` **18～20 個**、`quiz.expert` **18～20 個**（其他語言見〈非英文歌〉）。
    - 全部小寫、只有字母和 `'`（要跟 `norm()` 後一樣，例如 `can't`，不是 `Can't`、`can’t`）。
@@ -31,7 +30,7 @@
    cd frontend && npx ng test --watch=false && npx ng build
    ```
    `src/app/core/songs-data.spec.ts` 會檢查 index.json 裡每首歌：檔案存在、id＝檔名、必填欄位、影片、題數、每個字有中文、貼紙不重複、每個 `dict.<lang>.json` 有排序；`lang`、題數範圍依歌曲語言（`core/lang.ts`）、`lrclibId`／`localLrc` 剛好一個。
-10. **實際玩一次**：聽聽看（歌詞對得上）、三個難度的填填看（console 沒有「找不到」警告）、唱唱看（伴奏對得上）。
+10. **實際玩一次**：聽聽看（歌詞對得上）、三個難度的填填看（console 沒有「找不到」警告）、唱唱看（背景原唱對得上）。
 
 前端重新部署＋後端 content.db 上傳都完成，新歌才完整可玩（只有前端 → 選得到但顯示「歌詞還沒準備好」）。
 
@@ -69,7 +68,6 @@
 8. LRCLIB 沒有的歌：json 寫 `"localLrc": true`、**不寫** `lrclibId`（兩個剛好一個）；照常跑 `build_content.py`（找不到 `data/lrc/<id>.lrc` 會報錯）、上傳。
 9. 已上線的歌想修時間／加逐字時間：同樣存 `data/lrc/<id>.lrc` 就會覆蓋 LRCLIB，json 不用改。
 10. 微調：個別句子直接改 `.lrc` 的時間；整體差幾秒就改 json 的 `offset`。
-11. 沒有純伴奏影片就不放 `karaoke`。
 
 ## `<id>.json` 欄位
 
@@ -87,7 +85,6 @@
 | `localLrc` | ✅＊ | `true`＝LRCLIB 沒有，歌詞在本機 `data/lrc/<id>.lrc`（手動對時間） |
 | `readings` | | `{ 詞: 平假名 }`：修正斷詞工具唸錯的讀音（只放單詞） |
 | `videos` | ✅ | `[{ id, label, offset }]`，至少一支；`id`＝11 碼 YouTube videoId；第一支是預設 |
-| `karaoke` | | `{ id, offset }`：唱唱看伴奏（純音樂）影片 |
 | `sticker` | ✅ | 填填看「挑戰」全對的專屬貼紙，跟其他歌、🎤、👑 都不同 |
 | `quiz` | ✅ | `{ normal, hard, expert }`，題數依語言：英文 10／18～20／18～20（小寫單字）、日文 6～10／10～20／10～20（token 原文） |
 | `dict` | | `{ word: 中文 }`：這首歌專用的解釋，覆蓋 `dict.<lang>.json` |

@@ -113,10 +113,6 @@ describe('public/songs 歌曲資料', () => {
           expect(v.label.trim()).toBeTruthy();
           expect(typeof v.offset).toBe('number');
         }
-        if (song.karaoke) {
-          expect(song.karaoke.id).toMatch(YT_ID);
-          expect(typeof song.karaoke.offset).toBe('number');
-        }
       });
 
       it('readings（選填）：值只能是平假名', () => {

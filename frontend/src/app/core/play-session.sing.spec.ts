@@ -16,7 +16,7 @@ const lines = tokenize([
   { t: 7, end: 9, text: 'Tiny boats sail far away' },
   { t: 9, end: 11, text: 'Happy frogs sing loudly today' },
 ], {});
-const song = { id: 'demo', karaoke: { id: 'kara1', offset: -1 } } as Song;
+const song = { id: 'demo', videos: [] as Song['videos'] } as Song;
 
 describe('PlaySession 唱唱看', () => {
   let s: PlaySession;
@@ -239,7 +239,7 @@ describe('PlaySession 唱唱看', () => {
     await fixture.whenStable();
     expect(text()).toContain('⏭ 跳過（不扣分）');
     expect(text()).toContain('差一點！這幾個字再唸清楚一點：cat');
-    expect(text()).toContain('🎵 伴奏');
+    expect(text()).toContain('🎵 原唱');
     s.singAll.set(true);
     await fixture.whenStable();
     expect(text()).toContain('⏭ 先跳過');
@@ -256,7 +256,7 @@ describe('PlaySession 唱唱看（日文）', () => {
     { s: 'へ', ro: 'e' },
     { s: '行く', r: 'いく', ro: 'iku' },
   ];
-  const jaSong = { id: 'ja-demo', lang: 'ja' } as Song;
+  const jaSong = { id: 'ja-demo', videos: [] as Song['videos'], lang: 'ja' } as Song;
   let s: PlaySession;
   let heard: string;
   let transcribe: ReturnType<typeof vi.fn>;

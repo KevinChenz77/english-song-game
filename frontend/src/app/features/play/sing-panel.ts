@@ -55,7 +55,7 @@ export class SingPanel {
 
   constructor() {
     void this.recognizer.load(this.lang()).catch(() => {}); // 這首歌語言的模型；失敗訊息在 recognizer.note
-    this.backing.create(this.session.song()?.karaoke);
+    this.backing.create(this.session.song()?.videos[this.session.videoIndex()]);
     inject(DestroyRef).onDestroy(() => {
       this.session.cancelSing();
       this.backing.destroy();

@@ -30,6 +30,9 @@
         {{ player.playing() ? '⏸ 暫停' : '▶ 播放' }}
       </button>
     </div>
+    @if (session.mode() === 'sing') {
+      <p class="tip">🎧 唱唱看要戴耳機喔！不然麥克風會聽到歌的聲音</p>
+    }
     <div class="status" role="status">
       @if (player.error()) {
         這支影片沒辦法在這裡播放，請家長打開「⚙️ 家長設定」換另一個影片版本。
