@@ -118,7 +118,7 @@ export class PlaySession {
 
   /**
    * YoutubePlayer 每 100ms 呼叫（E）：t 是影片時間，扣掉 offset 成歌詞時間。
-   * 記錄 heard、聽聽看聽完 80% earn('listen')；填填看／唱唱看：唱到題目句尾 −0.15 秒暫停並設 active，
+   * 記錄 heard、聽聽看聽過 80% 的句子、最後一句唱完 earn('listen')；填填看／唱唱看：唱到題目句尾 −0.15 秒暫停並設 active，
    * 超過最後一句 → finish()（finished() 為 true 後不再呼叫）。
    */
   onTick(t: number): void {
@@ -133,16 +133,17 @@ export class PlaySession {
         const s = new Set(this.heard());
         for (let k = this.prevLine + 1; k <= i; k++) s.add(k);
         this.heard.set(s);
-        const need = lines.length * 0.8;
-        const kidId = this.kidId(),
-          song = this.song();
-        // 每多聽一句都會再呼叫；Rewards.earn 每首歌每項只給一次
-        if (this.mode() === 'listen' && s.size >= need && kidId !== null && song)
-          this.rewards.earn(kidId, song, 'listen');
       }
       this.prevLine = i;
     }
-    if (this.mode() === 'listen') return;
+    if (this.mode() === 'listen') {
+      // 最後一句唱完才給，慶祝不會在歌唱到一半跳出來；之後每個 tick 都會再呼叫，Rewards.earn 每首歌每項只給一次
+      const kidId = this.kidId(),
+        song = this.song();
+      if (t >= lines.at(-1)!.end && this.heard().size >= lines.length * 0.8 && kidId !== null && song)
+        this.rewards.earn(kidId, song, 'listen');
+      return;
+    }
     // 填填看和唱唱看共用：唱到句尾就停下來
     const n = this.questions().findIndex((q) => !q.done && t >= q.endT - 0.15 && t < q.endT + 1.5);
     if (n >= 0) {

@@ -152,7 +152,7 @@ ready / playing / error   // signals
 
 - 可寫 signals：`song`、`lines`、`lyricsError`、`mode`、`quizLevel`、`singAll`、`videoIndex`、`offset`、`time`（onTick 寫入的歌詞時間）、`questions`、`active`（題目 index）、`heard`、`makeup`、`finished`、`singSummary`、`parentOpen`。
 - `computed`：`currentLine`（**只有這一個來源**，由 `time` 推出）、星星字串。
-- `onTick(t)`：寫 `time`，依 `currentLine` 變化記錄 heard（一次最多跳 3 句）、聽完 80% → `earn('listen')`、到句尾 −0.15 秒暫停並設 `active`、超過最後一句 → `finish()`。**流程不用 `effect` 驅動**。
+- `onTick(t)`：寫 `time`，依 `currentLine` 變化記錄 heard（一次最多跳 3 句）、聽過 80% 而且最後一句唱完 → `earn('listen')`、到句尾 −0.15 秒暫停並設 `active`、超過最後一句 → `finish()`。**流程不用 `effect` 驅動**。
 - `open(song)`：重設本局狀態；換了歌（`song.id` 不同）時 `videoIndex` 設回 0，`offset` 讀 `off_<videoId>` 或該影片預設值。`mode`、`quizLevel`、`singAll` 沿用。
 - root 單例的理由：保留上次的玩法／難度；它不握 DOM，player 的生命週期由 `Play` 管。
 
