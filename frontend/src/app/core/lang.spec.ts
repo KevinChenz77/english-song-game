@@ -87,3 +87,22 @@ describe('tokenize', () => {
     expect(tokenize(en, {}, {})[0].tokens).toEqual([{ s: 'red' }, { s: 'fox' }, { s: 'runs' }]);
   });
 });
+
+describe('韓文（自編的字）', () => {
+  const ko = LANGS['ko'];
+
+  it('norm 去標點、保留方塊字；分解的字母組回 NFC', () => {
+    expect(ko.norm('나무!')).toBe('나무');
+    expect(ko.norm('나무'.normalize('NFD'))).toBe('나무');
+  });
+
+  it('forms：黏助詞的字退回原形；兩個字以下不動（가、나 是要學的字）', () => {
+    expect(ko.forms('나무가')).toEqual(['나무가', '나무']);
+    expect(ko.forms('가가')).toEqual(['가가']);
+  });
+
+  it('units：一個方塊字一拍；split 用空白切、英文字標 en', () => {
+    expect(ko.units({ s: '나무,' })).toBe(2);
+    expect(ko.split('나무 tree')).toEqual([{ s: '나무' }, { s: 'tree', l: 'en' }]);
+  });
+});

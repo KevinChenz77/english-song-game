@@ -115,9 +115,9 @@ describe('public/songs 歌曲資料', () => {
         }
       });
 
-      it('readings（選填）：值只能是平假名', () => {
+      it('readings（選填）：日文只能是平假名、韓文只能是羅馬拼音', () => {
         const { readings } = song as Song & { readings?: Record<string, string> };
-        for (const [w, r] of Object.entries(readings ?? {})) expect(r, w).toMatch(/^[ぁ-ゖー]+$/);
+        for (const [w, r] of Object.entries(readings ?? {})) expect(r, w).toMatch(song.lang === 'ko' ? /^[a-z]+$/ : /^[ぁ-ゖー]+$/);
       });
 
       it('填填看：題數在歌曲語言的 quizRange 裡，每個字用它的語言 norm 過、查得到中文', () => {

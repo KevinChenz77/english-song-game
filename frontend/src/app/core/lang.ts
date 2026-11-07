@@ -4,11 +4,13 @@ import { STOP, enForms, norm } from './game/text';
 /**
  * 每個語言的行為只在這裡（docs/multilingual.md §3）。
  */
+export type ReadingMode = 'hira' | 'romaji' | 'off';
+
 export interface Lang {
-  code: string; // BCP 47：'en' | 'ja'；也用在 dict.<code>.json、[attr.lang]
+  code: string; // BCP 47：'en' | 'ja' | 'ko'；也用在 dict.<code>.json、[attr.lang]
   name: string; // 選歌卡片標籤
   spaced: boolean; // token 之間顯示空白（ja 不插空白，改 CSS 小間距）
-  reading: boolean; // 有讀音輔助（ruby）可切換
+  reading?: readonly ReadingMode[]; // 讀音輔助（ruby）的切換順序，第一個是預設；沒有＝不顯示
   match?: RegExp; // 這個語言的字出現在別的語言的歌裡時怎麼認
   split(text: string): Token[]; // 後端沒給 tokens 時的斷詞
   norm(s: string): string; // 比對／查字典的 key
@@ -17,11 +19,11 @@ export interface Lang {
   forms(w: string): string[]; // 查字典依序試的字形
   expert: 'typed' | 'listen'; // 填填看「最難」的玩法
   quizRange: Record<QuizLevel, [number, number]>; // 每個難度的題目字數
-  units(t: Token): number; // 卡拉 OK 權重：en 音節、ja 音拍
+  units(t: Token): number; // 卡拉 OK 權重：en 音節、ja 音拍、ko 音節（一個方塊字）
   dictAudio: boolean; // Free Dictionary 真人錄音（只有英文）
   tts: { lang: string; good: RegExp; rate: number }; // speechSynthesis：語言、好聽的聲音名單、速度
-  /** 唱唱看：Whisper 模型（跟歌曲語言）、固定的辨識語言、下載 MB（提示用）、評分單位、每句過關門檻、幻覺字串 */
-  asr: {
+  /** 唱唱看：Whisper 模型（跟歌曲語言）、固定的辨識語言、下載 MB（提示用）、評分單位、每句過關門檻、幻覺字串。沒有＝沒有唱唱看分頁 */
+  asr?: {
     model: string;
     language?: string;
     mb: number;
@@ -48,12 +50,14 @@ const jaWords = (p: string) =>
     ? [...(jaSeg ??= new Intl.Segmenter('ja', { granularity: 'word' })).segment(p)].map((x) => x.segment)
     : [p];
 
+/** NFC（NFKC 會把 ㄱ、ㅏ 轉成組合字母）→ 小寫 → 去標點、符號、空白。 */
+const koNorm = (s: string) => s.normalize('NFC').toLowerCase().replace(/[\p{P}\p{S}\s]/gu, '');
+
 export const LANGS: Record<string, Lang> = {
   en: {
     code: 'en',
     name: '英文',
     spaced: true,
-    reading: false,
     match: /^[A-Za-z][A-Za-z'’]*$/,
     split: (text) => text.split(/\s+/).map((s) => tag(s, 'en')),
     norm,
@@ -83,7 +87,7 @@ export const LANGS: Record<string, Lang> = {
     code: 'ja',
     name: '日文',
     spaced: false,
-    reading: true,
+    reading: ['hira', 'romaji', 'off'],
     // 保底用：正常情況後端會給 tokens。空白永遠是 token 邊界。
     split: (text) =>
       text
@@ -109,6 +113,23 @@ export const LANGS: Record<string, Lang> = {
     },
     // 音拍：讀音的假名數，小寫的ゃゅょぁぃぅぇぉ不算（っ、ー、ん算一拍）
     units: (t) => Math.max(1, [...jaNorm(t.r ?? t.s)].filter((c) => !SMALL_KANA.test(c)).length),
+  },
+  ko: {
+    code: 'ko',
+    name: '韓文',
+    spaced: true,
+    reading: ['romaji', 'off'],
+    split: (text) => text.split(/\s+/).map((s) => tag(s, 'ko')),
+    norm: koNorm,
+    show: koNorm,
+    stop: new Set(), // 空的：가、나、다 這些音雖然也是助詞，卻正是要學的字
+    // 韓文詞會黏助詞：先查原字，查不到去掉字尾助詞
+    forms: (w) => (/..[은는이가을를에도의와과로]$/.test(w) ? [w, w.slice(0, -1)] : [w]),
+    expert: 'listen',
+    quizRange: { normal: [6, 10], hard: [10, 20], expert: [10, 20] },
+    dictAudio: false,
+    tts: { lang: 'ko-KR', good: /yuna|sora|premium|enhanced|google 한국의/i, rate: 0.8 },
+    units: (t) => Math.max(1, [...koNorm(t.s)].length),
   },
 };
 

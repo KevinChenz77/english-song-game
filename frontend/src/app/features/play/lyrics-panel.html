@@ -1,15 +1,15 @@
 @if (lang().reading) {
-  @let m = reading.mode();
+  @let m = reading.modeOf(lang());
   <button
     type="button"
     class="reading"
     [attr.aria-pressed]="m !== 'off'"
     [attr.aria-label]="
-      '讀音 ' + MODE[m].sym + '：' + MODE[m].name + '（點一下換' + MODE[MODE[m].next].name + '）'
+      '讀音 ' + MODE[m].sym + '：' + MODE[m].name + '（點一下換' + MODE[reading.after(lang())].name + '）'
     "
-    (click)="reading.next()"
+    (click)="reading.next(lang())"
   >
-    讀音 <span [attr.lang]="m === 'off' ? null : 'ja'">{{ MODE[m].sym }}</span>
+    讀音 <span [attr.lang]="m === 'hira' ? 'ja' : null">{{ MODE[m].sym }}</span>
   </button>
 }
 <div class="lyrics" #box>

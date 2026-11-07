@@ -96,7 +96,7 @@ export interface Lang {
   forms(w: string): string[];   // 查字典依序試的字形
   expert: 'typed' | 'listen';   // 填填看「最難」的玩法
   quizRange: Record<QuizLevel, [number, number]>; // 每個難度題目字數（songs-data.spec.ts 檢查）
-  reading: boolean;             // 有讀音輔助（ruby）可切換
+  reading?: readonly ReadingMode[]; // 讀音輔助（ruby）的切換順序，第一個是預設；沒有＝不顯示
   dictAudio: boolean;           // Free Dictionary 真人錄音
   tts: { lang: string; good: RegExp; rate: number };
   units(t: Token): number;      // 卡拉 OK 權重：en 音節數、ja 音拍數（§5.1）
@@ -126,7 +126,7 @@ export const tokLang = (t: Token, s: Pick<Song, 'lang'>) => (t.l ? LANGS[t.l] : 
 
 不放進設定的（YAGNI）：顯示方向（沒有 RTL 需求）、每語言 UI 文案（介面一律中文）。
 
-**加韓文／西班牙文**＝在 `LANGS` 加一筆（ko/es 都用空白斷詞，`split` 用 en 的；決定 `expert`、`quizRange`）、`build_content.py` 的 `LANGS` 加一筆（`tokens: None`，不需要讀音）、加 `dict.<code>.json`、歌曲 json 寫 `"lang"`。中文歌同理，若要注音再在 Python 端加讀音函式。
+**韓文已加入**（第一階段：聽聽看＋填填看，`asr` 還沒設定，所以沒有唱唱看分頁）：`Lang.reading` 列出語言的讀音模式，ko 只有羅馬拼音／關；羅馬拼音由 `build_content.py` 的 `ko_romaji` 產生。**加西班牙文**＝在 `LANGS` 加一筆（空白斷詞；決定 `expert`、`quizRange`）、`build_content.py` 的 `LANGS` 加一筆（`tokens: None`，不需要讀音）、加 `dict.<code>.json`、歌曲 json 寫 `"lang"`。中文歌同理，若要注音再在 Python 端加讀音函式。
 
 ---
 

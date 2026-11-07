@@ -4,7 +4,7 @@ import { PlaySession } from '../../core/play-session';
 import { YoutubePlayer } from '../../core/youtube-player';
 import { Rewards } from '../../core/rewards';
 import { parseLrc } from '../../core/game/lrc';
-import { tokenize } from '../../core/lang';
+import { LANGS, tokenize } from '../../core/lang';
 import { Reading } from '../../core/reading';
 import { LyricLine, Song } from '../../core/models/song.model';
 
@@ -121,10 +121,32 @@ describe('LyricsPanel 日文讀音', () => {
       localStorage.setItem('reading', bad);
       TestBed.resetTestingModule();
       const r = TestBed.inject(Reading);
-      expect(r.mode()).toBe('hira');
-      r.next();
-      expect(r.mode()).toBe('romaji');
+      expect(r.modeOf(LANGS['ja'])).toBe('hira');
+      r.next(LANGS['ja']);
+      expect(r.modeOf(LANGS['ja'])).toBe('romaji');
     }
+  });
+
+  it('韓文沒有平假名：預設羅馬拼音，只在羅馬拼音和關之間切換', () => {
+    const r = TestBed.inject(Reading);
+    const ko = LANGS['ko'];
+    const t = { s: '나무', ro: 'namu' };
+    expect(r.modeOf(ko)).toBe('romaji');
+    expect(r.of(t, ko)).toBe('namu');
+    r.next(ko);
+    expect(r.of(t, ko)).toBeUndefined();
+    r.next(ko);
+    expect(r.of(t, ko)).toBe('namu');
+    expect(r.of({ s: 'tree', ro: 'x' }, LANGS['en'])).toBeUndefined();
+  });
+
+  it('韓文按過不影響日文：各記各的', () => {
+    const r = TestBed.inject(Reading);
+    r.next(LANGS['ko']);
+    expect(r.modeOf(LANGS['ko'])).toBe('off');
+    expect(r.modeOf(LANGS['ja'])).toBe('hira');
+    expect(localStorage.getItem('reading_ko')).toBe('"off"');
+    expect(localStorage.getItem('reading')).toBeNull();
   });
 
   it('切換存在 localStorage reading（每台裝置記住）', async () => {
@@ -133,6 +155,6 @@ describe('LyricsPanel 日文讀音', () => {
     await f.whenStable();
     expect(localStorage.getItem('reading')).toBe('"romaji"');
     TestBed.resetTestingModule();
-    expect(TestBed.inject(Reading).mode()).toBe('romaji');
+    expect(TestBed.inject(Reading).modeOf(LANGS['ja'])).toBe('romaji');
   });
 });

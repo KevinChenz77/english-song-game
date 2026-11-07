@@ -69,6 +69,8 @@
 9. 已上線的歌想修時間／加逐字時間：同樣存 `data/lrc/<id>.lrc` 就會覆蓋 LRCLIB，json 不用改。
 10. 微調：個別句子直接改 `.lrc` 的時間；整體差幾秒就改 json 的 `offset`。
 
+韓文歌（`"lang": "ko"`）同上：後端產生羅馬拼音（`ko_romaji`，含連音和 ㄹㄹ），其他音變用 `readings` 逐詞覆蓋，值寫羅馬拼音。字典是 `dict.ko.json`。
+
 ## `<id>.json` 欄位
 
 型別定義：`frontend/src/app/core/models/song.model.ts`（`Song`）。

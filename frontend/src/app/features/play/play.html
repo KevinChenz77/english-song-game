@@ -1,7 +1,7 @@
 <div class="bar">
   <button type="button" class="ghost" [routerLink]="['/kids', kidId()]">← 回去</button>
   <div class="tabs">
-    @for (t of tabs; track t[0]) {
+    @for (t of tabs(); track t[0]) {
       <button
         type="button"
         [class.on]="session.mode() === t[0]"
