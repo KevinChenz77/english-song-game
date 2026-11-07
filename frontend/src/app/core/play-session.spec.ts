@@ -110,20 +110,38 @@ describe('PlaySession', () => {
     expect([...s.heard()]).toEqual([0, 1, 2]);
   });
 
-  it('聽聽看：聽到第 8 句（80%）才 earn(listen)；不會在句尾暫停；最後一句唱完仍亮著', () => {
+  it('聽聽看：聽過 80% 而且最後一句唱完才 earn(listen)；不會在句尾暫停；最後一句唱完仍亮著', () => {
     const { s, calls, earned } = setup();
     s.open(7, song, lines, {});
     s.setOffset(0);
     calls.length = 0;
-    for (let t = 10; t < 24; t += 0.5) s.onTick(t); // 聽完第 0～6 句（7 句）
+    for (let t = 10; t < 30; t += 0.5) s.onTick(t); // 10 句都聽了，但最後一句還沒唱完（end 30）
     expect(earned).toEqual([]);
-    s.onTick(24.5); // 第 7 句 → 8/10
-    expect(earned).toEqual(['demo:listen']); // 之後每句都會再呼叫，由 Rewards.earn 去重
-    for (let t = 25; t < 40; t += 0.5) s.onTick(t);
+    s.onTick(30);
+    expect(earned).toEqual(['demo:listen']); // 之後每個 tick 都會再呼叫，由 Rewards.earn 去重
+    for (let t = 30.5; t < 40; t += 0.5) s.onTick(t);
     expect(earned.every((e) => e === 'demo:listen')).toBe(true);
     expect(s.currentLine()).toBe(9);
     expect(calls).not.toContain('pause');
     expect(s.finished()).toBe(false);
+  });
+
+  it('聽聽看：影片在最後一句 end 前結束，finish() 時聽過 80% 也給', () => {
+    const { s, earned } = setup();
+    s.open(7, song, lines, {});
+    s.setOffset(0);
+    for (let t = 10; t < 29; t += 0.5) s.onTick(t);
+    expect(earned).toEqual([]);
+    s.finish();
+    expect(earned).toEqual(['demo:listen']);
+  });
+
+  it('聽聽看：拖到最後一句，聽不到 80% 不給', () => {
+    const { s, earned } = setup();
+    s.open(7, song, lines, {});
+    s.setOffset(0);
+    for (const t of [10, 26.5, 28.5, 30, 31]) s.onTick(t);
+    expect(earned).toEqual([]);
   });
 
   it('填填看：題目句尾 −0.15 秒暫停並設 active（存 index）；不 earn listen', () => {
