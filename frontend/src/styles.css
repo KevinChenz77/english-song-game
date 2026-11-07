@@ -1,0 +1,276 @@
+/* 共用樣式（搬自 legacy <style>）。畫面專屬的樣式放各元件 .css。 */
+:root {
+  /* 顏色（docs/uiux/audit-and-plan.md §2.1；舊變數名保留，只換成過 WCAG AA 的值） */
+  --bg: #eaf6ff;
+  --card: #fff;
+  --ink: #16324f; /* 白底 13.1 */
+  --ink-2: #53687e; /* 次要文字；白底 5.75／--bg 5.24 */
+  --muted: #53687e; /* 原 #6b8299（3.98） */
+  --accent: #1769b8; /* 白字 5.6；原 #2e8bdc（3.59） */
+  --accent2: #9fd4ff; /* 只當裝飾底色，不當文字或邊框 */
+  --line-strong: #4f86bd; /* 外框按鈕／輸入框邊框；白底 3.83 */
+  --good: #1a7f4b; /* 白底 5.02；原 #2fb36d（2.7） */
+  --good-bg: #e3f7ec;
+  --bad: #c2372f; /* 白底 5.41；原 #e5534b（3.7） */
+  --warn: #b35c00; /* 白底 4.72 */
+  --hl: #ffcf33;
+  --hl-bg: #fff6d6;
+  --focus: #ff9f1c;
+
+  /* 字級 */
+  --fs-xs: 14px;
+  --fs-sm: 16px;
+  --fs-md: 18px;
+  --fs-lg: 22px;
+  --fs-xl: 28px;
+  --fs-hero: 64px;
+
+  /* 間距 */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  /* 圓角、陰影 */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-pill: 999px;
+  --sh-1: 0 2px 8px #16324f14;
+  --sh-2: 0 6px 20px #16324f29;
+
+  /* 觸控 */
+  --tap-min: 44px;
+  --tap: 48px;
+  --tap-kid: 64px;
+
+  --top-row: 56px; /* 每個畫面第一列（.bar）與右上角 💾 的共同高度 */
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, 'PingFang TC', 'Noto Sans TC', sans-serif;
+  font-size: var(--fs-md);
+  line-height: 1.5;
+  background: var(--bg);
+  color: var(--ink);
+}
+button,
+select,
+input {
+  font: inherit;
+}
+/* 日文：用日文字形顯示漢字（少了 lang="ja" 會用繁中字形）；只用系統內建字型，不載網路字型 */
+:lang(ja) {
+  font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Noto Sans JP', system-ui, sans-serif;
+}
+button {
+  cursor: pointer;
+  border: 0;
+  border-radius: var(--r-md);
+  padding: 10px 16px;
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--fs-md);
+  line-height: 1.2;
+  min-height: var(--tap);
+  min-width: var(--tap-min);
+  transition: transform 0.1s;
+}
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+button.ghost {
+  background: #fff;
+  color: var(--accent);
+  border: 2px solid var(--line-strong);
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+/* 焦點框：內圈 --ink、外圈 --focus，在藍底、白底、淺藍底上都看得到 */
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--ink);
+}
+/* 並排按鈕不要黏在一起：新寫的用 .actions；舊的區塊流（表單、對話框）先用 margin 補 */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+:is(form, .form) > button + button {
+  margin-inline-start: var(--sp-2);
+}
+h1 {
+  font-size: var(--fs-xl);
+  margin: 8px 0 16px;
+}
+
+/* 每個畫面的第一列：和 💾 同高、垂直置中；右邊留位置給 💾 */
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  min-height: var(--top-row);
+  margin-bottom: 12px;
+  padding-right: 110px;
+}
+/* 換行時每一行也是 --top-row 高，第一行仍和 💾 對齊：
+   直接放的按鈕（48px）上下各補 4px；其他子元素（h1、分頁、星星）撐到 --top-row 並垂直置中 */
+.bar > button {
+  margin-block: calc((var(--top-row) - 48px) / 2);
+}
+.bar > :not(button) {
+  min-height: var(--top-row);
+  display: flex;
+  align-items: center;
+}
+.bar h1 {
+  margin: 0;
+}
+.bar button {
+  font-size: 16px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+.card {
+  position: relative;
+  background: var(--card);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px;
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-1);
+  min-height: 150px;
+  justify-content: center;
+}
+.card .big {
+  font-size: 52px;
+  line-height: 1;
+}
+/* 最難完成：2px 金色流動外框（轉動的錐形漸層） */
+@property --spin {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+.card.gold {
+  border: 2px solid transparent;
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    conic-gradient(from var(--spin), #b8860b, #ffd700, #fff8dc, #ffd700, #b8860b, #daa520, #b8860b) border-box;
+  animation: goldspin 3s linear infinite;
+}
+@keyframes goldspin {
+  to {
+    --spin: 360deg;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card.gold {
+    animation: none;
+  }
+}
+/* 全域安全網：動畫、轉場、平滑捲動都降級（元件要別的降級方式就在自己的 CSS 另寫） */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+@keyframes shake {
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
+}
+@keyframes pulse {
+  50% {
+    transform: scale(1.08);
+  }
+}
+.note {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  text-align: center;
+}
+
+dialog {
+  border: 0;
+  border-radius: var(--r-lg);
+  padding: 20px;
+  width: min(420px, calc(100% - 32px));
+  background: var(--card);
+  color: var(--ink);
+}
+dialog::backdrop {
+  background: #16324fcc;
+}
+dialog h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+}
+dialog label {
+  display: block;
+  margin: 10px 0;
+}
+dialog input {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  font-size: 20px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 2px solid var(--line-strong);
+}
+[hidden] {
+  display: none !important;
+}
+
+/* 換頁：舊畫面淡出、新畫面淡入並微微上移（≤0.2 秒）。
+   ::view-transition-* 掛在 <html> 上，元件樣式會被加 scope 而對不到，所以用 輸出成全域規則 */
+::view-transition-old(root) {
+  animation: 120ms ease-out both vt-out;
+}
+::view-transition-new(root) {
+  animation: 200ms ease-out both vt-in;
+}
+@keyframes vt-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

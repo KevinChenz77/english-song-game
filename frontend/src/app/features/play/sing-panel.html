@@ -1,0 +1,155 @@
+<!-- 一個 token：有讀音就用 ruby（照讀音切換）。不要在 > 和 < 之間換行，ja 字之間會多出空白 -->
+<ng-template #tok let-t
+  >@if (rt(t); as r) {<ruby>{{ t.s }}<rt [attr.lang]="romaji() ? 'ja-Latn' : null">{{ r }}</rt></ruby>} @else {{{ t.s }}}</ng-template
+>
+<section class="box">
+  <p class="note" aria-live="polite">{{ recognizer.note() }}</p>
+  @if (session.singSummary(); as s) {
+    <!-- 不顯示分數，達標時由慶祝畫面告訴小朋友 -->
+    <h3 class="done">🎉 唱完了！</h3>
+    @if (session.singAll() && s.score < 80) {
+      <p>唱對 80% 以上的句子，就可以拿到一顆星星和皇冠貼紙喔！</p>
+    }
+    @if (s.missed.length) {
+      <p>要多練的字：</p>
+      <div class="chips" [attr.lang]="lang().code">
+        @for (w of s.missed; track w.s) {
+          <button type="button" class="chip" [attr.lang]="w.l ?? null" (click)="session.tapWord(w)"><ng-container *ngTemplateOutlet="tok; context: { $implicit: w }" /></button>
+        }
+      </div>
+    }
+    <div class="actions">
+      <button type="button" class="mic" (click)="session.setMode('sing')">再玩一次</button>
+    </div>
+  } @else {
+    @if (started()) {
+      <div class="prog">第 {{ progress() }} / {{ stops().length }} 句</div>
+    }
+    @if (stop(); as s) {
+      <div
+        class="sent"
+        [attr.lang]="lang().code"
+        [class.ruby]="lang().reading"
+        [class.unspaced]="!lang().spaced"
+      >
+        @if (s.result) {
+          @for (w of s.result.words; track $index) {
+            @let t = w.tok ?? { s: w.t };
+            @if (w.ok === 'miss') {
+              <button
+                type="button"
+                class="sw-miss"
+                [attr.lang]="t.l ?? null"
+                (click)="session.tapWord(t)"
+              ><ng-container *ngTemplateOutlet="tok; context: { $implicit: t }" /></button>
+            } @else {
+              <span class="sw-ok" [attr.lang]="t.l ?? null"><ng-container *ngTemplateOutlet="tok; context: { $implicit: t }" /></span>
+            }
+            @if (lang().spaced) {
+              {{ ' ' }}
+            }
+          }
+        } @else if (lang().reading) {
+          @for (t of line()?.tokens ?? []; track $index) {
+            <span class="tk" [attr.lang]="t.l ?? null"><ng-container *ngTemplateOutlet="tok; context: { $implicit: t }" /></span>
+          }
+        } @else {
+          {{ line()?.text }}
+        }
+      </div>
+      <div class="zhq">{{ session.translations()[line()?.text ?? ''] }}</div>
+      <!-- 狀態文字放在同一個一直存在的 live region，螢幕閱讀器才會念出變化 -->
+      <div class="status" aria-live="polite">
+        @if (s.msg) {
+          <p class="msg">{{ s.msg }}</p>
+        }
+        @switch (s.state) {
+          @case ('rec') {
+            <p class="st st-rec">🎤 我在聽…</p>
+          }
+          @case ('busy') {
+            <p class="st st-busy">聽聽看你唸得怎麼樣…</p>
+          }
+          @case ('pass') {
+            <p class="big-ok">⭐ 過關！</p>
+          }
+          @case ('fail') {
+            <p class="st-fail">
+              @if (missHint()) {
+                差一點！這幾個字再唸清楚一點：{{ missHint() }}（點橘色的字聽聽看）
+              } @else {
+                差一點！再試一次
+              }
+            </p>
+          }
+        }
+      </div>
+      @if (s.state === 'rec') {
+        <div class="lvl" aria-hidden="true"><div [style.width.%]="level() * 100"></div></div>
+      }
+      <div class="actions">
+        @switch (s.state) {
+          @case ('rec') {
+            <button type="button" class="mic rec" (click)="recognizer.stop()">✅ 唸完了</button>
+          }
+          @case ('busy') {}
+          @case ('pass') {
+            <!-- 過關後也能再試（保留過關紀錄，重唱沒過也不會被取消） -->
+            <button type="button" class="mic" (click)="session.nextStop()">▶ 下一句</button>
+            <button type="button" class="ghost" (click)="sing()">🎤 再試一次</button>
+          }
+          @case ('fail') {
+            <button type="button" class="mic" (click)="sing()">🎤 再試一次</button>
+            <button type="button" class="ghost" (click)="listenAgain()">🔁 再聽一次</button>
+            <button type="button" class="ghost" (click)="session.nextStop()">
+              {{ s.tries >= 3 && !session.singAll() ? '⏭ 跳過（不扣分）' : '⏭ 先跳過' }}
+            </button>
+          }
+          @default {
+            <button type="button" class="mic" (click)="sing()">🎤 換你唸</button>
+            <button type="button" class="ghost" (click)="listenAgain()">🔁 再聽一次</button>
+          }
+        }
+      </div>
+      <div class="opts">
+        <button
+          type="button"
+          class="switch"
+          [attr.aria-pressed]="backing.on()"
+          (click)="backing.toggle()"
+        >
+          {{ backing.on() ? '🎵 原唱：開' : '🎵 原唱：關' }}<i aria-hidden="true"></i>
+        </button>
+      </div>
+    } @else {
+      <div class="modes">
+        <button
+          type="button"
+          class="mode"
+          [class.on]="!session.singAll()"
+          [attr.aria-pressed]="!session.singAll()"
+          (click)="choose(false)"
+        >
+          <span class="ico" aria-hidden="true">🎯 </span>
+          <b>練習</b>
+          <small>前 8 句・🎤 貼紙</small>
+        </button>
+        <button
+          type="button"
+          class="mode"
+          [class.on]="session.singAll()"
+          [attr.aria-pressed]="session.singAll()"
+          (click)="choose(true)"
+        >
+          <span class="ico" aria-hidden="true">🏆 </span>
+          <b>挑戰</b>
+          <small>整首・⭐👑 貼紙</small>
+        </button>
+      </div>
+      <p>
+        {{ session.makeup() ? '回去補唸漏掉的句子 🔙' : '按 ▶ 播放，聽完一句會停下來換你唸 🎤' }}
+      </p>
+      <p class="note">聲音只在這台裝置上辨識，不會傳出去。</p>
+    }
+  }
+</section>

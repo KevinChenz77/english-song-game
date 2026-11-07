@@ -1,0 +1,49 @@
+<dialog #dlg aria-labelledby="cloudT" aria-describedby="cloudD" (close)="closed()">
+  <form novalidate (submit)="submit($event)">
+    <h2 id="cloudT">{{ kind() === 'save' ? '💾 把進度存到雲端' : '📥 從雲端拿回進度' }}</h2>
+    <p id="cloudD" class="hint" [hidden]="done()">
+      🔒 家長幫忙填。{{ kind() === 'save' ? '換台裝置也能用同樣的名字和密碼拿回來。' : '輸入存檔時用的名字和密碼。' }}
+    </p>
+    <div [hidden]="done()">
+      <label>名字<input #nameEl [formField]="f.name" autocomplete="username" /></label>
+      <label>密碼<input #pwEl type="password" [formField]="f.password" autocomplete="current-password" /></label>
+    </div>
+    <p class="msg" role="status" [class.bad]="bad()" [class.ok]="done()">{{ msg() }}</p>
+    <div class="actions">
+      <button [hidden]="done()" [disabled]="busy()">
+        {{ busy() ? '處理中…' : kind() === 'save' ? '💾 存到雲端' : '📥 拿回來' }}
+      </button>
+      <button #closeEl type="button" class="ghost" (click)="close()">{{ done() ? '👌 好了' : '取消' }}</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog #askDlg class="wide" aria-labelledby="askT" (close)="asked()">
+  <form method="dialog">
+    @if (asking(); as a) {
+      <h2 id="askT">這台已經有「{{ a.mine.name }}」了，要用哪一份進度？</h2>
+    }
+    @if (compare(); as c) {
+      <div class="cmp">
+        <div>
+          <b>☁️ 雲端的進度</b>
+          @for (s of c.cloud.songs; track $index) {
+            <div>{{ s }}</div>
+          }
+          <div>貼紙：{{ c.cloud.stickers }}</div>
+        </div>
+        <div>
+          <b>📱 這台的進度</b>
+          @for (s of c.here.songs; track $index) {
+            <div>{{ s }}</div>
+          }
+          <div>貼紙：{{ c.here.stickers }}</div>
+        </div>
+      </div>
+    }
+    <div class="actions">
+      <button value="cloud">☁️ 用雲端的</button>
+      <button class="ghost" value="keep" autofocus>📱 保留這台的</button>
+    </div>
+  </form>
+</dialog>

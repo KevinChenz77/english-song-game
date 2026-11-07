@@ -1,0 +1,32 @@
+<div class="bar"><button type="button" class="ghost" routerLink="/">← 換人</button></div>
+@if (kid(); as k) {
+  <h1>嗨 {{ k.avatar }} {{ k.name }}！選一首歌</h1>
+  @if (catalog.songs.hasValue()) {
+    <div class="grid songs">
+      @for (s of catalog.songs.value(); track s.id) {
+        <a [routerLink]="['play', s.id]"><app-song-card [song]="s" [progress]="k.songs[s.id] ?? {}" /></a>
+      }
+    </div>
+  } @else if (catalog.songs.error()) {
+    <p>歌曲清單讀不到 😢 請確認網路後再試一次。</p>
+    <button type="button" (click)="catalog.songs.reload()">重試</button>
+  } @else {
+    <p>歌曲載入中…</p>
+  }
+  <section class="stickers" aria-labelledby="stickersTitle">
+    <h2 id="stickersTitle">🏆 我的貼紙</h2>
+    <ul>
+      @for (s of stickers(); track s.emoji) {
+        <li>
+          {{ s.emoji }}
+          @if (s.n > 1) {
+            <span class="n">×{{ s.n }}</span>
+          }
+        </li>
+      } @empty {
+        <li class="empty" aria-hidden="true">？</li>
+        <li class="hint">還沒有貼紙，去唱歌拿貼紙！</li>
+      }
+    </ul>
+  </section>
+}

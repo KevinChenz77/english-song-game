@@ -1,0 +1,22 @@
+{
+  "id": "letitgo",
+  "lrclibId": 12302283,
+  "title": "Let It Go",
+  "artist": "Idina Menzel",
+  "from": "冰雪奇緣 Frozen",
+  "emoji": "❄️",
+  "videos": [
+    { "id": "L0MK7qz13bU", "label": "Sing-Along 版", "offset": 4.5 },
+    { "id": "moSFlvxnbgk", "label": "電影片段版", "offset": 0 }
+  ],
+  "sticker": "❄️",
+  "quiz": {
+    "normal": ["snow", "door", "sky", "wind", "cold", "storm", "queen", "light", "girl", "free"],
+    "hard": ["always", "inside", "controlled", "bothered", "stand", "frozen", "anyway", "kingdom", "going", "ground", "through", "right", "never", "thought", "small", "heaven", "break", "mountain", "footprint", "perfect"],
+    "expert": ["everything", "footprint", "isolation", "controlled", "mountain", "swirling", "perfect", "frozen", "heaven", "conceal", "through", "thought", "always", "bothered", "anymore", "flurries", "anyway", "light", "rules", "never"]
+  },
+  "dict": {
+    "let": "讓（let it go = 放手、放下）",
+    "go": "走、去（let it go = 放手）"
+  }
+}

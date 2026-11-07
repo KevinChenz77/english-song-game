@@ -1,0 +1,24 @@
+{
+  "id": "snowman",
+  "lrclibId": 36301227,
+  "title": "Do You Want to Build a Snowman?",
+  "artist": "Kristen Bell, Agatha Lee Monn & Katie Lopez",
+  "from": "冰雪奇緣 Frozen",
+  "emoji": "⛄",
+  "videos": [
+    { "id": "TeQ_TTyLGMs", "label": "Sing-Along 版", "offset": 0 }
+  ],
+  "sticker": "⛄",
+  "quiz": {
+    "normal": ["door", "play", "ride", "walls", "rooms", "build", "best", "wish", "hang", "okay"],
+    "hard": ["snowman", "pictures", "watching", "buddies", "company", "courage", "started", "around", "asking", "little", "please", "empty", "there", "other", "would", "anymore", "build", "right"],
+    "expert": ["pictures", "watching", "anymore", "buddies", "company", "courage", "snowman", "started", "around", "asking", "little", "please", "build", "empty", "there", "other", "would", "right"]
+  },
+  "dict": {
+    "anna": "安娜（妹妹）",
+    "build": "堆（build a snowman = 堆雪人）",
+    "elsa": "艾莎（姊姊）",
+    "hang": "待著、陪（hang out = 一起玩）",
+    "joan": "貞德（畫裡的人物）"
+  }
+}

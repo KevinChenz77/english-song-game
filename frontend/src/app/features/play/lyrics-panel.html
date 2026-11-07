@@ -1,0 +1,85 @@
+@if (lang().reading) {
+  @let m = reading.modeOf(lang());
+  <button
+    type="button"
+    class="reading"
+    [attr.aria-pressed]="m !== 'off'"
+    [attr.aria-label]="
+      '讀音 ' + MODE[m].sym + '：' + MODE[m].name + '（點一下換' + MODE[reading.after(lang())].name + '）'
+    "
+    (click)="reading.next(lang())"
+  >
+    讀音 <span [attr.lang]="m === 'hira' ? 'ja' : null">{{ MODE[m].sym }}</span>
+  </button>
+}
+<div class="lyrics" #box>
+  @for (r of rows(); track $index; let i = $index) {
+    @let now = i === session.currentLine();
+    <div
+      class="line"
+      [attr.data-line]="i"
+      [class.now]="now"
+      [class.past]="i < session.currentLine()"
+      [class.ok]="r.passed"
+    >
+      <div
+        class="en"
+        [attr.lang]="lang().code"
+        [class.ruby]="lang().reading"
+        [class.unspaced]="!lang().spaced"
+      >
+        @if (session.mode() === 'listen') {
+          <button
+            type="button"
+            class="seek"
+            lang="zh-Hant"
+            [class.on]="now"
+            aria-label="從這句開始播"
+            (click)="seek(r.l.t)"
+          >
+            ▶
+          </button>
+        }
+        @for (w of r.words; track $index) {
+          @if (w.blank) {
+            <span class="blank" [class.ok]="r.blankOk">{{ w.t.s }}</span>
+          } @else {
+            @let rt = reading.of(w.t, w.L);
+            <button
+              type="button"
+              class="w"
+              [attr.lang]="w.L === lang() ? null : w.L.code"
+              [class.known]="w.known"
+              (click)="session.tapWord(w.t)"
+            >@if (rt) {<ruby>{{ w.t.s }}<rt>{{ rt }}</rt></ruby>} @else {{{ w.t.s }}}</button>
+          }
+          @if (lang().spaced) {
+            {{ ' ' }}
+          }
+        }
+      </div>
+      @let zh = session.translations()[r.l.text];
+      @if (session.parentOpen()) {
+        <button type="button" class="zh" [class.empty]="!zh" (click)="editZh(r.l.text)">
+          {{ zh || '＋ 填翻譯' }}
+        </button>
+      } @else if (zh) {
+        <div class="zh">{{ zh }}</div>
+      }
+      @if (r.chips.length) {
+        <div class="vocab">
+          @for (c of r.chips; track c.w) {
+            <button type="button" class="chip" (click)="session.tapWord(c.t)">
+              <b [attr.lang]="c.code">{{ c.w }}</b> {{ c.zh }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+  }
+  <p class="note">中文是機器翻譯，家長可以在「⚙️ 家長設定」裡打開修改。</p>
+  <p class="note">
+    單字真人發音來自 Free Dictionary API／Wikimedia Commons（CC BY／BY-SA
+    授權）；沒有錄音的字用合成語音。
+  </p>
+</div>

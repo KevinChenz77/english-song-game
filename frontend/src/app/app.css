@@ -1,0 +1,25 @@
+.shell {
+  position: relative;
+  --gutter: clamp(16px, 4vw, 48px); /* 左右留白：手機 16px，視窗越寬留越多 */
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 16px var(--gutter);
+}
+
+/* 💾 和每個畫面第一列（.bar）用同一個高度的盒子、各自垂直置中，所以上下對齊 */
+.save {
+  position: absolute;
+  top: 16px;
+  right: var(--gutter);
+  height: var(--top-row);
+  display: flex;
+  align-items: center;
+  /* 換頁時 💾 自己一層，不跟著淡入淡出 */
+  view-transition-name: save;
+}
+.save button {
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

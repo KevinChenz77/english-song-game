@@ -1,0 +1,80 @@
+.ask {
+  font-size: var(--fs-xl);
+  margin: 0 0 var(--sp-4);
+}
+.kids {
+  /* 160px：手機（390）兩欄、iPad 直向四欄 */
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--sp-4);
+}
+.kid {
+  display: grid;
+  grid-template-rows: 1fr auto;
+}
+.card {
+  min-height: 200px;
+  font-size: var(--fs-lg);
+  text-align: center;
+  text-decoration: none;
+}
+.card .big {
+  font-size: 72px;
+}
+.name {
+  font-weight: 700;
+}
+.stars {
+  font-size: var(--fs-md);
+  color: var(--ink-2);
+}
+/* 管理模式才出現；放在卡片下面，不疊在卡片的點擊範圍上 */
+.del {
+  margin-top: var(--sp-2);
+  background: #fff;
+  color: var(--bad);
+  border: 2px solid var(--bad);
+}
+.form {
+  background: var(--card);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-1);
+  padding: var(--sp-4);
+  margin-top: var(--sp-4);
+}
+.form h2 {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-lg);
+}
+.form input {
+  font-size: 20px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 2px solid var(--line-strong);
+  width: 100%;
+  max-width: 320px;
+}
+.avs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 64px);
+  gap: var(--sp-2);
+  margin: var(--sp-3) 0 var(--sp-4);
+}
+.avs button {
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  font-size: 34px;
+  background: #fff;
+  border: 3px solid var(--bg);
+}
+.avs button.sel {
+  border-color: var(--accent);
+  background: var(--bg);
+}
+.bad {
+  margin: 6px 0 0;
+  color: var(--bad);
+}
+.bad:empty {
+  margin: 0;
+}

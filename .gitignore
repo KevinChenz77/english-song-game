@@ -3,6 +3,7 @@ data/
 __pycache__/
 *.py[cod]
 .venv/
+backend/.venv-tools/
 .pytest_cache/
 
 # Node / Angular
@@ -17,3 +18,7 @@ dist/
 # OS / editor
 .DS_Store
 .claude/settings.local.json
+
+# Agent worktrees
+.claude/worktrees/
+.playwright-mcp/

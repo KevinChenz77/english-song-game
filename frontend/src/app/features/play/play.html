@@ -1,0 +1,109 @@
+<div class="bar">
+  <button type="button" class="ghost" [routerLink]="['/kids', kidId()]">← 回去</button>
+  <div class="tabs">
+    @for (t of tabs(); track t[0]) {
+      <button
+        type="button"
+        [class.on]="session.mode() === t[0]"
+        [attr.aria-pressed]="session.mode() === t[0]"
+        (click)="session.setMode(t[0])"
+      >
+        {{ t[1] }}
+      </button>
+    }
+  </div>
+  <div class="stars" role="img" [attr.aria-label]="'這首歌的星星：' + stars()">{{ stars() }}</div>
+</div>
+@if (song.error()) {
+  <p>這首歌的設定讀不到 😢 請確認網路後再試一次。</p>
+  <button type="button" (click)="song.reload()">重試</button>
+}
+<div class="stage">
+  <div class="media">
+    <div class="vid">
+      <div #yt class="yt"></div>
+      <!-- 透明遮罩：小朋友點不到 YouTube 的連結和推薦影片 -->
+      <div class="shield" aria-hidden="true" (click)="toggle()"></div>
+    </div>
+    <div class="ctrl center">
+      <button type="button" class="play" (click)="toggle()">
+        {{ player.playing() ? '⏸ 暫停' : '▶ 播放' }}
+      </button>
+    </div>
+    @if (session.mode() === 'sing') {
+      <p class="tip">🎧 唱唱看要戴耳機喔！不然麥克風會聽到歌的聲音</p>
+    }
+    <div class="status" role="status">
+      @if (player.error()) {
+        這支影片沒辦法在這裡播放，請家長打開「⚙️ 家長設定」換另一個影片版本。
+      }
+    </div>
+  </div>
+  <div class="main">
+    @if (content.hasValue()) {
+      @switch (session.mode()) {
+        @case ('quiz') {
+          <app-quiz-panel [dicts]="dicts()" />
+        }
+        @case ('sing') {
+          <app-sing-panel />
+        }
+      }
+      <app-lyrics-panel [dicts]="dicts()" />
+    } @else if (content.error(); as e) {
+      <div class="lyrics-msg">
+        <p>{{ e.message }}</p>
+        <button type="button" (click)="content.reload()">重試</button>
+      </div>
+    } @else {
+      <div class="lyrics-msg">歌詞載入中…</div>
+    }
+  </div>
+  <!-- 家長設定：直向／手機放最下面；橫向在影片下方（見 play.css grid-template-areas） -->
+  <details class="parent" (toggle)="onParentToggle($event)">
+    <summary>⚙️ 家長設定</summary>
+    <div class="ctrl">
+      <label>
+        影片版本：
+        <select (change)="setVideo($event)">
+          @for (v of session.song()?.videos ?? []; track v.id; let i = $index) {
+            <option [value]="i" [selected]="i === session.videoIndex()">{{ v.label }}</option>
+          }
+        </select>
+      </label>
+    </div>
+    <div class="ctrl">
+      歌詞時間：<button
+        type="button"
+        class="ghost"
+        (click)="session.setOffset(session.offset() - 0.1)"
+      >
+        ⏪ 提早 0.1 秒</button
+      ><span>{{ offsetText() }}</span
+      ><button type="button" class="ghost" (click)="session.setOffset(session.offset() + 0.1)">
+        延後 0.1 秒 ⏩
+      </button>
+    </div>
+    <div class="ctrl">
+      <span class="spacer" aria-hidden="true">歌詞時間：</span
+      ><button type="button" class="ghost" (click)="session.setOffset(session.offset() - 1)">
+        ⏪ 提早 1 秒</button
+      ><button type="button" class="ghost" (click)="session.setOffset(session.offset() + 1)">
+        延後 1 秒 ⏩
+      </button>
+    </div>
+    <div class="ctrl">
+      <!-- 預設關；開關狀態由 aria-pressed 表達 -->
+      <button
+        type="button"
+        [class.ghost]="!sfx.on()"
+        [attr.aria-pressed]="sfx.on()"
+        (click)="sfx.toggle()"
+      >
+        🔔 音效：{{ sfx.on() ? '開' : '關' }}
+      </button>
+    </div>
+    <div class="ctrl">設定打開時，點歌詞下方的中文可以修改翻譯。</div>
+  </details>
+</div>
+<app-word-pop [dicts]="dicts()" />

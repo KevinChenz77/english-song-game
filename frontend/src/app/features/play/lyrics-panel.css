@@ -1,0 +1,175 @@
+.lyrics {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 12px 16px;
+  height: min(60vh, 520px);
+  overflow-y: auto;
+  position: relative;
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lyrics {
+    scroll-behavior: auto;
+  }
+}
+.line {
+  font-size: 22px;
+  line-height: 1.5;
+  padding: 10px 6px 10px 10px;
+  border-radius: 10px;
+  color: var(--ink-2, var(--muted));
+  transition: background 0.2s;
+  border-bottom: 1px solid #eef4fa;
+}
+.en {
+  line-height: 2; /* 撐出單字的點擊高度 */
+}
+.line.past {
+  color: var(--muted);
+}
+/* 目前句：底色、文字色、左邊色條，歌詞粗體（PO 要的；字變寬偶爾會多折一行） */
+.line.now {
+  background: var(--hl-bg, #fff6d6);
+  color: var(--ink);
+  box-shadow: inset 4px 0 0 var(--hl);
+}
+.line.now .en {
+  font-weight: 700;
+}
+.line.ok .en::after {
+  content: ' ✅';
+}
+.zh {
+  display: block;
+  font: inherit;
+  font-size: 18px;
+  color: #5f7489;
+  margin-top: 2px;
+}
+.line.now .zh {
+  color: var(--ink);
+}
+button.zh {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  min-height: 0;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline dashed var(--accent2);
+}
+button.zh.empty {
+  color: var(--accent);
+  text-decoration: none;
+  border: 2px dashed var(--line-strong, var(--accent));
+  border-radius: 999px;
+  padding: 2px 12px;
+  margin-top: 6px;
+  min-height: 44px;
+}
+.vocab {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.chip {
+  font-size: 15px;
+  min-height: 44px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #eef6ff;
+  color: var(--ink);
+  font-weight: 400;
+}
+.chip b {
+  color: var(--accent);
+}
+.line.now .chip {
+  background: #fff;
+}
+.seek {
+  font-size: 15px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0;
+  margin-right: 6px;
+  vertical-align: middle;
+  background: transparent;
+  color: var(--accent);
+  border: 2px solid var(--line-strong, var(--accent));
+  border-radius: 50%;
+}
+.seek.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+/* 單字按鈕：看起來和文字一樣；上下 padding 撐到約 44px 可點高度，負 margin 抵銷，不撐開行距 */
+.w {
+  font: inherit;
+  line-height: inherit;
+  color: inherit;
+  background: none;
+  min-height: 0;
+  min-width: 28px; /* 「a」這種短字也好點 */
+  margin: -2px 0;
+  padding: 2px 2px;
+  border-radius: 6px;
+}
+.w:focus-visible {
+  outline: 3px solid var(--focus, var(--accent));
+  outline-offset: 0;
+}
+.w:hover {
+  background: #e3f1ff;
+}
+.w.known {
+  text-decoration: underline dotted var(--accent2);
+}
+.blank {
+  display: inline-block;
+  min-width: 3.5em;
+  border-bottom: 3px solid var(--accent);
+  text-align: center;
+  color: transparent;
+}
+.blank.ok {
+  color: var(--good);
+  border-color: var(--good);
+}
+/* 讀音切換（只有有讀音的語言才有） */
+.reading {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 4px 14px;
+  margin-bottom: 8px;
+  border-radius: 999px;
+  background: var(--card);
+  border: 2px solid var(--line-strong, var(--accent));
+  color: var(--ink);
+  font-size: 17px;
+}
+.reading span {
+  display: inline-block;
+  min-width: 1.2em;
+  font-weight: 700;
+  color: var(--accent);
+}
+.reading[aria-pressed='false'] {
+  border-style: dashed;
+}
+/* 有 ruby 的語言：固定較高的行距，切換讀音／目前句都不會重新排版 */
+.en.ruby {
+  line-height: 2.6;
+}
+rt {
+  font-size: 0.5em;
+  line-height: 1;
+}
+/* 不用空白分隔的語言（ja）：token 之間一點間距，看得出哪裡可以點 */
+.en.unspaced .w,
+.en.unspaced .blank {
+  margin-inline: 0.12em;
+}
