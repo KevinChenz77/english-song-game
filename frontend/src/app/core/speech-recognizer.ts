@@ -113,16 +113,16 @@ export class SpeechRecognizer {
    * 只留一個模型（iPad 記憶體）：換語言就丟掉舊的再載新的。
    */
   load(L: Lang): Promise<Asr> {
-    if (this.model === L.asr.model && this.asr) return this.asr;
+    if (this.model === L.asr!.model && this.asr) return this.asr;
     const old = this.asr;
-    this.model = L.asr.model;
+    this.model = L.asr!.model;
     const gen = ++this.gen; // 載入中又換語言：舊的這次不再寫提示
     const p: Promise<Asr> = (async () => {
       await old?.then((a) => a.dispose?.()).catch(() => {}); // 先放掉舊模型的記憶體
       if (this.gen !== gen) throw new Error('stale'); // 等的時候又換了語言：這次不用下載了
       const pipeline = await this.pipelineFn();
       const files: Record<string, [number, number]> = {};
-      const asr: Asr = await pipeline('automatic-speech-recognition', L.asr.model, {
+      const asr: Asr = await pipeline('automatic-speech-recognition', L.asr!.model, {
         dtype: 'q8',
         device: 'wasm',
         progress_callback: (p: { status: string; file: string; loaded: number; total: number }) => {
@@ -130,7 +130,7 @@ export class SpeechRecognizer {
           files[p.file] = [p.loaded, p.total];
           const [l, t] = Object.values(files).reduce((a, [x, y]) => [a[0] + x, a[1] + y], [0, 0]);
           this.note.set(
-            `語音模型下載中 ${Math.round((l / t) * 100)}%（只有第一次需要，約 ${L.asr.mb}MB）`,
+            `語音模型下載中 ${Math.round((l / t) * 100)}%（只有第一次需要，約 ${L.asr!.mb}MB）`,
           );
         },
       });
@@ -166,10 +166,10 @@ export class SpeechRecognizer {
 
 /** 固定辨識語言（多語模型），避免小朋友口音被判成別的語言；英文模型不用給。 */
 const opts = (L: Lang) =>
-  L.asr.language ? { language: L.asr.language, task: 'transcribe' } : undefined;
+  L.asr!.language ? { language: L.asr!.language, task: 'transcribe' } : undefined;
 
 /** Whisper 沒聽到東西時常冒出這些（每個語言的 asr.junk）。 */
-export const isHallucination = (t: string, L: Lang = LANGS['en']) => L.asr.junk.test(t);
+export const isHallucination = (t: string, L: Lang = LANGS['en']) => L.asr!.junk.test(t);
 
 async function to16k(buf: Float32Array, sr: number): Promise<Float32Array> {
   if (sr === 16000) return buf;

@@ -28,6 +28,13 @@ import { QuizPanel } from './quiz-panel';
 import { SingPanel } from './sing-panel';
 import { WordPop } from './word-pop';
 
+/** 這首歌的分頁：語言沒有語音辨識（Lang.asr）就沒有唱唱看。 */
+export const playTabs = (song: Pick<Song, 'lang'>): [PlayMode, string][] => [
+  ['listen', '🎧 聽聽看'],
+  ['quiz', '🧩 填填看'],
+  ...(langOf(song).asr ? ([['sing', '🎤 唱唱看']] as [PlayMode, string][]) : []),
+];
+
 /** 遊玩容器：分頁、影片區（透明遮罩）、▶ 按鈕、狀態訊息、家長設定、歌詞（載入失敗＋重試）。 */
 @Component({
   imports: [RouterLink, LyricsPanel, QuizPanel, SingPanel, WordPop],
@@ -47,11 +54,7 @@ export class Play {
   private readonly yt = viewChild.required<ElementRef<HTMLElement>>('yt');
   private createdFor: string | null = null; // 已建立播放器的 song.id（同一個 Play 換歌時重建）
 
-  protected readonly tabs: [PlayMode, string][] = [
-    ['listen', '🎧 聽聽看'],
-    ['quiz', '🧩 填填看'],
-    ['sing', '🎤 唱唱看'],
-  ];
+  protected readonly tabs = computed(() => playTabs(this.session.song() ?? {}));
 
   /** 歌曲設定（public/songs/<id>.json）。guard 已用 index.json 確認歌存在。 */
   protected readonly song = httpResource<Song>(() => `songs/${this.songId()}.json`);

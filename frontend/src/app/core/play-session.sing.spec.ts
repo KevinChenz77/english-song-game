@@ -389,11 +389,11 @@ describe('SpeechRecognizer 換語言', () => {
     await r.load(LANGS['ja']);
     expect(dispose).toHaveBeenCalledTimes(1); // en 的被丟掉
     expect(pipeline.mock.calls.map((c) => c[1])).toEqual([
-      LANGS['en'].asr.model,
-      LANGS['ja'].asr.model,
+      LANGS['en'].asr!.model,
+      LANGS['ja'].asr!.model,
     ]);
     expect(notes[0]).toContain('約 41MB');
-    expect(notes[1]).toContain(`約 ${LANGS['ja'].asr.mb}MB`);
+    expect(notes[1]).toContain(`約 ${LANGS['ja'].asr!.mb}MB`);
     expect(await r.transcribe(new Float32Array(10), LANGS['ja'])).toBe('');
     expect(runs.at(-1)![1]).toEqual({ language: 'japanese', task: 'transcribe' });
     heardJa = 'ねこがいる';

@@ -22,8 +22,8 @@ export interface Lang {
   units(t: Token): number; // 卡拉 OK 權重：en 音節、ja 音拍、ko 音節（一個方塊字）
   dictAudio: boolean; // Free Dictionary 真人錄音（只有英文）
   tts: { lang: string; good: RegExp; rate: number }; // speechSynthesis：語言、好聽的聲音名單、速度
-  /** 唱唱看：Whisper 模型（跟歌曲語言）、固定的辨識語言、下載 MB（提示用）、評分單位、每句過關門檻、幻覺字串 */
-  asr: {
+  /** 唱唱看：Whisper 模型（跟歌曲語言）、固定的辨識語言、下載 MB（提示用）、評分單位、每句過關門檻、幻覺字串。沒有＝沒有唱唱看分頁 */
+  asr?: {
     model: string;
     language?: string;
     mb: number;
@@ -129,14 +129,6 @@ export const LANGS: Record<string, Lang> = {
     quizRange: { normal: [6, 10], hard: [10, 20], expert: [10, 20] },
     dictAudio: false,
     tts: { lang: 'ko-KR', good: /yuna|sora|premium|enhanced|google 한국의/i, rate: 0.8 },
-    asr: {
-      model: 'onnx-community/whisper-base', // 和日文同一個模型，不用重新下載
-      language: 'korean',
-      mb: 80,
-      unit: 'char',
-      pass: 0.6, // ponytail：調整用旋鈕，第二階段小朋友實際錄音後再調
-      junk: /^(\[.*\]|\(.*\)|[.。、…!！?？\s]+)$|시청|구독/, // YouTube 字幕的固定句
-    },
     units: (t) => Math.max(1, [...koNorm(t.s)].length),
   },
 };

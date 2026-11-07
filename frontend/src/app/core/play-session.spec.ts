@@ -66,6 +66,13 @@ function setup() {
 describe('PlaySession', () => {
   beforeEach(() => localStorage.clear());
 
+  it('open：停在唱唱看時開沒有語音辨識的語言（韓文），回到聽聽看', () => {
+    const { s } = setup();
+    s.mode.set('sing');
+    s.open(1, { ...song, lang: 'ko' }, lines, {});
+    expect(s.mode()).toBe('listen');
+  });
+
   it('open：offset 用影片預設；換歌時 videoIndex 歸 0；setMode 回到開頭並暫停', () => {
     const { s, calls } = setup();
     s.open(1, song, lines, {});

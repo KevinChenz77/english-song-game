@@ -20,7 +20,7 @@ Adding a song = add <id>.json + append to index.json + run this + upload:
          -H 'Content-Type: application/octet-stream' <backend>/api/admin/content
 Prints counts only, never lyrics.
 """
-import argparse, functools, json, pathlib, random, re, sqlite3, sys, tempfile, time, urllib.parse, urllib.request
+import argparse, functools, json, pathlib, random, re, sqlite3, sys, tempfile, time, unicodedata, urllib.parse, urllib.request
 from datetime import datetime, timezone
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -110,7 +110,7 @@ def ko_romaji(word):
 def ko_tokens(text, readings):
     """[[s, None, ro], ...]: one token per space-separated word; r stays empty so TTS and scoring use the Hangul."""
     out = []
-    for s in text.split():
+    for s in unicodedata.normalize("NFC", text).split():  # NFD Hangul would romanize to nothing
         base = EDGE_PUNCT.sub("", s)
         out.append([s, None, readings.get(base) or ko_romaji(base) or None])
     return out
@@ -296,6 +296,7 @@ def check():
         ["hangeul", "eumak", "ppalli", "kkot", "isseo", "gangaji", "dallyeok", "joa"], [ko_romaji(w) for w in ("한글", "음악", "빨리", "꽃", "있어", "강아지", "달력", "좋아")]
     assert tag_foreign(ko_tokens("강아지, 달력 happy", {"달력": "dallyeog"}), "ko") == \
         [["강아지,", None, "gangaji"], ["달력", None, "dallyeog"], ["happy", None, None, "en"]]
+    assert ko_tokens(unicodedata.normalize("NFD", "달력"), {}) == [["달력", None, "dallyeok"]]
     try:
         _ja()
     except ImportError:

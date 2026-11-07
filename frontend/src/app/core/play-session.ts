@@ -113,7 +113,7 @@ export class PlaySession {
     this.translations.set(translations);
     this.parentOpen.set(false); // 新畫面的 <details> 是關的
     this.offset.set(this.savedOffset());
-    this.setMode(this.mode());
+    this.setMode(this.mode() === 'sing' && !langOf(song).asr ? 'listen' : this.mode()); // 這個語言沒有唱唱看
   }
 
   /**
@@ -411,13 +411,13 @@ export class PlaySession {
     if (!text) return retry('busy', '好像沒聽到喔，靠近一點再唸一次 🎤');
     if (!still('busy')) return;
     const result =
-      L.asr.unit === 'char'
+      L.asr!.unit === 'char'
         ? scoreChars(line.tokens, text, song ?? {})
         : scoreLine(line.text, text);
-    if (result.score >= L.asr.pass) this.sfx.correct();
+    if (result.score >= L.asr!.pass) this.sfx.correct();
     this.patchStop(
       idx,
-      result.score >= L.asr.pass
+      result.score >= L.asr!.pass
         ? { result, state: 'pass', passed: true }
         : { result, state: 'fail', tries: stop.tries + 1 },
     );

@@ -121,9 +121,9 @@ describe('LyricsPanel 日文讀音', () => {
       localStorage.setItem('reading', bad);
       TestBed.resetTestingModule();
       const r = TestBed.inject(Reading);
-      expect(r.mode()).toBe('hira');
+      expect(r.modeOf(LANGS['ja'])).toBe('hira');
       r.next(LANGS['ja']);
-      expect(r.mode()).toBe('romaji');
+      expect(r.modeOf(LANGS['ja'])).toBe('romaji');
     }
   });
 
@@ -140,12 +140,21 @@ describe('LyricsPanel 日文讀音', () => {
     expect(r.of({ s: 'tree', ro: 'x' }, LANGS['en'])).toBeUndefined();
   });
 
+  it('韓文按過不影響日文：各記各的', () => {
+    const r = TestBed.inject(Reading);
+    r.next(LANGS['ko']);
+    expect(r.modeOf(LANGS['ko'])).toBe('off');
+    expect(r.modeOf(LANGS['ja'])).toBe('hira');
+    expect(localStorage.getItem('reading_ko')).toBe('"off"');
+    expect(localStorage.getItem('reading')).toBeNull();
+  });
+
   it('切換存在 localStorage reading（每台裝置記住）', async () => {
     const { f, toggle } = await setupJa();
     toggle.click();
     await f.whenStable();
     expect(localStorage.getItem('reading')).toBe('"romaji"');
     TestBed.resetTestingModule();
-    expect(TestBed.inject(Reading).mode()).toBe('romaji');
+    expect(TestBed.inject(Reading).modeOf(LANGS['ja'])).toBe('romaji');
   });
 });
