@@ -37,14 +37,6 @@ describe('LyricsPanel', () => {
     expect(tap).toHaveBeenCalledWith({ s: 'fox' });
   });
 
-  it('卡拉 OK：依 karaokeTimes 亮字（每音節 0.45 秒，不是每字 0.5 秒）', async () => {
-    const { s, f, el } = await setup();
-    s.time.set(1.5); // 第 0 句 red/fox/runs 從 1、1.45、1.9 秒開始
-    await f.whenStable();
-    const sung = [...el.querySelectorAll('[data-line="0"] .w.sung')].map((b) => b.textContent);
-    expect(sung).toEqual(['red', 'fox']);
-  });
-
   it('沒有翻譯：小朋友看不到提示，家長模式才出現「＋ 填翻譯」', async () => {
     const { s, f, el } = await setup();
     expect(el.textContent).toContain('紅狐狸在跑');

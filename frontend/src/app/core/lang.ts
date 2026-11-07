@@ -19,7 +19,6 @@ export interface Lang {
   forms(w: string): string[]; // 查字典依序試的字形
   expert: 'typed' | 'listen'; // 填填看「最難」的玩法
   quizRange: Record<QuizLevel, [number, number]>; // 每個難度的題目字數
-  units(t: Token): number; // 卡拉 OK 權重：en 音節、ja 音拍、ko 音節（一個方塊字）
   dictAudio: boolean; // Free Dictionary 真人錄音（只有英文）
   tts: { lang: string; good: RegExp; rate: number }; // speechSynthesis：語言、好聽的聲音名單、速度
   /** 唱唱看：Whisper 模型（跟歌曲語言）、固定的辨識語言、下載 MB（提示用）、評分單位、每句過關門檻、幻覺字串。沒有＝沒有唱唱看分頁 */
@@ -32,8 +31,6 @@ export interface Lang {
     junk: RegExp;
   };
 }
-
-const SMALL_KANA = /[ゃゅょぁぃぅぇぉゎ]/;
 
 /** NFKC → 小寫 → 片假名轉平假名 → 去標點、符號、空白。 */
 const jaNorm = (s: string) =>
@@ -80,8 +77,6 @@ export const LANGS: Record<string, Lang> = {
       pass: 0.7,
       junk: /^(\[.*\]|\(.*\)|thank you\.?|you\.?|\.+)$/i, // Whisper 沒聽到東西時常冒出這些
     },
-    // ponytail：母音群數粗估音節（字尾單獨的 e 不算），夠用來分配時間
-    units: (t) => Math.max(1, (norm(t.s).replace(/([^aeiouy])e$/, '$1').match(/[aeiouy]+/g) ?? []).length),
   },
   ja: {
     code: 'ja',
@@ -111,8 +106,6 @@ export const LANGS: Record<string, Lang> = {
       // 沒聽到東西時 Whisper 常冒出 YouTube 字幕的固定句（實測靜音：「さて、この動画を見てくれてありがとう!」）
       junk: /^(\[.*\]|\(.*\)|（.*）|おやすみなさい。?|[.。、…!！?？\s]+)$|ご視聴|チャンネル登録|動画を見て/,
     },
-    // 音拍：讀音的假名數，小寫的ゃゅょぁぃぅぇぉ不算（っ、ー、ん算一拍）
-    units: (t) => Math.max(1, [...jaNorm(t.r ?? t.s)].filter((c) => !SMALL_KANA.test(c)).length),
   },
   ko: {
     code: 'ko',
@@ -129,7 +122,6 @@ export const LANGS: Record<string, Lang> = {
     quizRange: { normal: [6, 10], hard: [10, 20], expert: [10, 20] },
     dictAudio: false,
     tts: { lang: 'ko-KR', good: /yuna|sora|premium|enhanced|google 한국의/i, rate: 0.8 },
-    units: (t) => Math.max(1, [...koNorm(t.s)].length),
   },
 };
 

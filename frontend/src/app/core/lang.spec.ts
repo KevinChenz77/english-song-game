@@ -58,14 +58,6 @@ describe('LANGS / tokLang', () => {
     expect(lookup('cats', { cat: '貓' }, LANGS['en'].forms)).toBe('貓');
     expect(lookup('ねこs', { ねこ: '貓' }, LANGS['ja'].forms)).toBeNull();
   });
-
-  it('units：en 母音群（字尾單獨的 e 不算）、ja 音拍', () => {
-    const en = (s: string) => LANGS['en'].units({ s });
-    expect(['make', 'the', 'over', 'free', 'happy'].map(en)).toEqual([1, 1, 2, 1, 2]);
-    expect(LANGS['ja'].units({ s: '学校', r: 'がっこう' })).toBe(4);
-    expect(LANGS['ja'].units({ s: 'きょう' })).toBe(2);
-    expect(LANGS['ja'].units({ s: 'ラーメン' })).toBe(4);
-  });
 });
 
 describe('tokenize', () => {
@@ -101,8 +93,7 @@ describe('韓文（自編的字）', () => {
     expect(ko.forms('가가')).toEqual(['가가']);
   });
 
-  it('units：一個方塊字一拍；split 用空白切、英文字標 en', () => {
-    expect(ko.units({ s: '나무,' })).toBe(2);
+  it('split 用空白切、英文字標 en', () => {
     expect(ko.split('나무 tree')).toEqual([{ s: '나무' }, { s: 'tree', l: 'en' }]);
   });
 });

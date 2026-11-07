@@ -122,9 +122,6 @@ button.zh.empty {
 .w:hover {
   background: #e3f1ff;
 }
-.w.sung {
-  color: var(--accent);
-}
 .w.known {
   text-decoration: underline dotted var(--accent2);
 }

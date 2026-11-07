@@ -90,7 +90,7 @@ src/app/
    ├─ cloud/cloud-dialog.ts         # 存檔／匯入 <dialog>＋同名比較 <dialog>
    └─ play/
       ├─ play.ts                    # 遊玩容器：分頁、影片區（含透明遮罩 shield）、▶ 按鈕、狀態訊息、家長設定 <details>、歌詞載入失敗＋重試
-      ├─ lyrics-panel.ts            # 歌詞：目前句高亮＋自動捲動、卡拉 OK 逐字亮、空格、▶ seek、單字 chip、中文（家長模式可改）
+      ├─ lyrics-panel.ts            # 歌詞：目前句高亮＋自動捲動、空格、▶ seek、單字 chip、中文（家長模式可改）
       ├─ word-pop.ts                # 點單字的小視窗（6 秒自動關；指標或鍵盤焦點在上面時不關〔holdPop〕、🔊 重播）
       ├─ quiz-panel.ts              # 填填看：難度選擇、選擇題、最難打字題、結果
       └─ sing-panel.ts              # 唱唱看：練習／挑戰選擇、音量條、逐字著色、過關／重試／跳過、總結
@@ -151,7 +151,7 @@ ready / playing / error   // signals
 舊版 `setMode / tick / answer / finishQuiz / nextStop / startSing / finishSing` 的全域變數集中在這裡。它 inject `YoutubePlayer`、`Rewards`、`Pronunciation`、`SpeechRecognizer`；反過來沒有人 inject 它以外的東西互相呼叫。
 
 - 可寫 signals：`song`、`lines`、`lyricsError`、`mode`、`quizLevel`、`singAll`、`videoIndex`、`offset`、`time`（onTick 寫入的歌詞時間）、`questions`、`active`（題目 index）、`heard`、`makeup`、`finished`、`singSummary`、`parentOpen`。
-- `computed`：`currentLine`（**只有這一個來源**，由 `time` 推出）、卡拉 OK 已唱字數、星星字串。
+- `computed`：`currentLine`（**只有這一個來源**，由 `time` 推出）、星星字串。
 - `onTick(t)`：寫 `time`，依 `currentLine` 變化記錄 heard（一次最多跳 3 句）、聽完 80% → `earn('listen')`、到句尾 −0.15 秒暫停並設 `active`、超過最後一句 → `finish()`。**流程不用 `effect` 驅動**。
 - `open(song)`：重設本局狀態；換了歌（`song.id` 不同）時 `videoIndex` 設回 0，`offset` 讀 `off_<videoId>` 或該影片預設值。`mode`、`quizLevel`、`singAll` 沿用。
 - root 單例的理由：保留上次的玩法／難度；它不握 DOM，player 的生命週期由 `Play` 管。
