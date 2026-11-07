@@ -89,6 +89,32 @@ describe('Pronunciation.say 依語言', () => {
     await vi.waitFor(() => expect(done).toBe(true));
   });
 
+  it('TTS：utterance 出錯也 resolve', async () => {
+    const said = TestBed.inject(Pronunciation).say({ s: 'いぬ' }, LANGS['ja']);
+    (spoken[0] as unknown as { onerror: () => void }).onerror();
+    await said;
+  });
+
+  it('錄音 play() 被拒：改用 TTS，唸完才 resolve', async () => {
+    localStorage.setItem('aud2', JSON.stringify({ fox: 'https://example.test/fox.mp3' }));
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockRejectedValue(new Error('blocked'));
+    const said = TestBed.inject(Pronunciation).say({ s: 'fox' }, LANGS['en']);
+    await vi.waitFor(() => expect(spoken).toHaveLength(1));
+    expect(spoken[0].text).toBe('fox');
+    (spoken[0] as unknown as { onend: () => void }).onend();
+    await said;
+    play.mockRestore();
+  });
+
+  it('字典查詢丟錯：改用 TTS，唸完才 resolve', async () => {
+    const json = () => Promise.reject(new SyntaxError('bad json'));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 200, ok: true, json }));
+    const said = TestBed.inject(Pronunciation).say({ s: 'fox' }, LANGS['en']);
+    await vi.waitFor(() => expect(spoken).toHaveLength(1));
+    (spoken[0] as unknown as { onend: () => void }).onend();
+    await said;
+  });
+
   it('錄音：播到 ended 才 resolve', async () => {
     localStorage.setItem('aud2', JSON.stringify({ fox: 'https://example.test/fox.mp3' }));
     const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue();

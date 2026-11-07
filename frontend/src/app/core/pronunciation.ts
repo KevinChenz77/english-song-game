@@ -42,7 +42,7 @@ export class Pronunciation {
 
   /**
    * 唸一個 token；L＝這個 token 的語言（tokLang）。dictAudio 語言用 s 查字典（要 norm 過）。
-   * 點擊時同步呼叫：快取裡有、或直接 TTS 時當下就唸。唸完才 resolve（被新的發音或 stop() 打斷時可能不會 resolve，要等的人自己設上限）。
+   * 點擊時同步呼叫：快取裡有、或直接 TTS 時當下就唸。唸完才 resolve；被新的發音或 stop() 打斷時可能提早 resolve，也可能不 resolve，要等的人自己設上限。
    */
   say(t: Token, L: Lang): Promise<void> {
     if (!L.dictAudio) return this.speak(t.r ?? t.s, L);

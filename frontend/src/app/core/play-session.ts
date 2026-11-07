@@ -94,7 +94,7 @@ export class PlaySession {
   private prevLine = -1; // onTick 上一次的目前句（記 heard 用；拖進度條跳太多不算）
   // 🔁 重播後停下來要再唸一次答案。不用 active.set(null)：題目畫面、按錯的選項會在重播時消失
   private resay = false;
-  private sayRun = 0; // 答對後等單字唸完；換玩法／換歌時遞增，等完發現變了就不再播放
+  private sayRun = 0; // 答對後等單字唸完；新的答對、換玩法／換歌時遞增，等完發現變了就不做後續
 
   /** 開新的一局（E）。換了歌：videoIndex 歸 0；offset 讀 off_<videoId> 或預設。mode/quizLevel/singAll 沿用。依歌曲語言填 tokens。 */
   open(
@@ -105,6 +105,7 @@ export class PlaySession {
     tokens?: Record<string, Token[]>, // 後端的斷詞＋讀音（SongContent.tokens）
   ): void {
     this.closePop(); // 上一局留下的單字小視窗不要帶過來
+    if (this.makeup()) this.finishQuiz(); // 補答最後一題還在等唸完：先結算，獎勵才記在舊歌
     if (this.song()?.id !== song.id) this.videoIndex.set(0);
     this.kidId.set(kidId);
     this.song.set(song);
@@ -157,6 +158,7 @@ export class PlaySession {
 
   /** 切換玩法並重新出題（E）。填填看依 quizLevel、唱唱看依 singAll（練習 = 前 8 句）。影片回到開頭並暫停。 */
   setMode(m: PlayMode): void {
+    if (this.makeup()) this.finishQuiz(); // 補答最後一題還在等唸完：下面會取消後續，先結算才不會掉獎勵
     this.cancelSing(); // 換玩法時丟掉進行中的錄音／辨識、停伴奏
     this.sayRun++;
     const lines = this.lines(),
@@ -268,7 +270,7 @@ export class PlaySession {
       this.sayAnswer(q),
       new Promise((done) => setTimeout(done, SAY_MAX_MS)),
     ]).then(() => {
-      if (run !== this.sayRun) return;
+      if (run !== this.sayRun || this.finished()) return;
       if (!this.makeup()) this.player.play();
       else if (left) this.jumpTo(left);
       else this.finishQuiz();
@@ -293,7 +295,7 @@ export class PlaySession {
     return this.mode() === 'quiz' ? (this.questions() as Question[]) : [];
   }
 
-  /** 跳回某題那句的開頭（補答、🔁 再聽一次），點擊時同步呼叫，同步 play()。 */
+  /** 跳回某題那句的開頭，同步 play()。🔁 再聽一次是點擊時同步呼叫；補答時是答對後等單字唸完才呼叫，不在點擊同步鏈上。 */
   jumpTo(q: Question): void {
     this.resay = true; // 最難聽發音：重播到句尾停下時再唸一次答案
     this.player.seek(this.lines()[q.i].t + this.offset() - 0.3);

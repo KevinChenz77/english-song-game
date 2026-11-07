@@ -106,6 +106,40 @@ describe('PlaySession 填填看', () => {
     expect(player.play).not.toHaveBeenCalled();
   });
 
+  it('補答最後一題還在等唸完就換玩法：照樣結算，獎勵只給一次', async () => {
+    const { s, rewards, say } = setup('hard');
+    s.finish();
+    s.questions.update((qs) => (qs as Question[]).map((x, k) => ({ ...x, done: k === 0 })));
+    say.mockReturnValueOnce(new Promise<void>(() => {}));
+    s.active.set(1);
+    s.answer('go');
+    s.setMode('listen');
+    await settle();
+    expect(rewards.earn).toHaveBeenCalledExactlyOnceWith(1, s.song(), 'quizHard');
+  });
+
+  it('等單字唸完時已經結算：唸完不播放', async () => {
+    const { s, player, say } = setup();
+    let spoken = () => {};
+    say.mockReturnValueOnce(new Promise<void>((done) => (spoken = done)));
+    s.active.set(0);
+    s.answer('fox');
+    s.finished.set(true);
+    spoken();
+    await settle();
+    expect(player.play).not.toHaveBeenCalled();
+  });
+
+  it('連續兩次答對：只有最新一次觸發後續', async () => {
+    const { s, player } = setup();
+    s.active.set(0);
+    s.answer('fox');
+    s.active.set(1);
+    s.answer('go');
+    await settle();
+    expect(player.play).toHaveBeenCalledTimes(1);
+  });
+
   it('補答中答對、還有漏的：唸完跳到下一題那句（不是直接播放下去）', async () => {
     const { s, player } = setup();
     s.finish(); // 兩題都漏了
